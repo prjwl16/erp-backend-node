@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Schema for furniture ERP shop
+// To manage retail and wholesale and warehouse
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  name            String?
+  phone           String?
+  avatar          String?
+  password        String
+  role            Role      @default(USER)
+  createdProducts Product[] @relation("CreatedByRelation")
+  updatedProducts Product[] @relation("UpdatedByRelation")
+
+  createdAt DateTime @default(now()) @db.Timestamp()
+  updatedAt DateTime @updatedAt @db.Timestamp()
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  stock       Int
+  images      String[]
+  category    Category @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  createdBy   User     @relation("CreatedByRelation", fields: [createdById], references: [id])
+  createdById String
+  updatedBy   User?    @relation("UpdatedByRelation", fields: [updatedById], references: [id])
+  updatedById String
+
+  createdAt        DateTime           @default(now()) @db.Timestamp()
+  updatedAt        DateTime           @updatedAt @db.Timestamp()
+  warehouseProduct WarehouseProduct[]
+}
+
+model Category {
+  id   String @id @default(uuid())
+  name String
+
+  createdAt DateTime  @default(now()) @db.Timestamp()
+  updatedAt DateTime  @updatedAt @db.Timestamp()
+  products  Product[]
+}
+
+model Warehouse {
+  id       String @id @default(uuid())
+  name     String
+  location String
+  address  String
+
+  createdAt        DateTime           @default(now()) @db.Timestamp()
+  updatedAt        DateTime           @updatedAt @db.Timestamp()
+  warehouseProduct WarehouseProduct[]
+}
+
+model WarehouseProduct {
+  id          String    @id @default(uuid())
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  warehouseId String
+  product     Product   @relation(fields: [productId], references: [id])
+  productId   String
+  stock       Int
+
+  createdAt DateTime @default(now()) @db.Timestamp()
+  updatedAt DateTime @updatedAt @db.Timestamp()
+}
