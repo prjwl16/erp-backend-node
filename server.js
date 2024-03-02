@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
-app.use("/api", require("./routes/index"));
+app.use("/", require("./routes/index"));
 
 
 const port = process.env.PORT || 3000;
