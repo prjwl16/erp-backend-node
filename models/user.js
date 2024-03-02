@@ -5,7 +5,6 @@ exports.getUserDetails = async (userId) => {
     where: {id: userId},
     include: {
       client: true,
-      
     },
   });
   return user;

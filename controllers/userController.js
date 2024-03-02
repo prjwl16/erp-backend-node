@@ -1,3 +1,18 @@
+exports.getUser =async(req,res)=> {
+
+    const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+    });
+    if (!user) {
+        return res.status(404).json({
+            status: 'fail',
+            message: 'User not found',
+        });
+    }
+    res.status(200).json(user);
+
+}
+
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 

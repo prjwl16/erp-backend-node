@@ -19,6 +19,7 @@ model client {
   email   String @unique
   phone   String @unique
   address String
+  // code    String @unique
 
   User User[]
 
@@ -55,27 +56,34 @@ enum Role {
 }
 
 model Product {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   name        String
   description String?
   code        String
   sku         String?
-  price       Float
-  stock       Int
-  images      String[]
-  category    Category @relation(fields: [categoryId], references: [id])
-  categoryId  String
-  createdBy   User     @relation("CreatedByRelation", fields: [createdById], references: [id])
-  createdById String
-  updatedBy   User?    @relation("UpdatedByRelation", fields: [updatedById], references: [id])
-  updatedById String
 
-  createdAt        DateTime            @default(now()) @db.Timestamp()
-  updatedAt        DateTime            @updatedAt @db.Timestamp()
+  // pricing
+  baseAmount   Float
+  taxSlab      Float
+  taxAmount    Float
+  totalAmount  Float
+  otherCharges Float // tax free
+
+  images String[]
+  tags   String[]
+
+  category         Category            @relation(fields: [categoryId], references: [id])
+  categoryId       String
+  client           client              @relation(fields: [clientId], references: [id])
+  clientId         String
   warehouseProduct Warehouse_Product[]
 
-  client   client @relation(fields: [clientID], references: [id])
-  clientID String
+  updatedBy   User?    @relation("UpdatedByRelation", fields: [updatedById], references: [id])
+  updatedById String
+  createdBy   User     @relation("CreatedByRelation", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now()) @db.Timestamp()
+  updatedAt   DateTime @updatedAt @db.Timestamp()
 }
 
 model Category {
@@ -86,8 +94,8 @@ model Category {
   updatedAt DateTime  @updatedAt @db.Timestamp()
   products  Product[]
 
-  client   client @relation(fields: [clientID], references: [id])
-  clientID String
+  client   client @relation(fields: [clientId], references: [id])
+  clientId String
 }
 
 model Warehouse {
@@ -100,8 +108,8 @@ model Warehouse {
   updatedAt        DateTime            @updatedAt @db.Timestamp()
   warehouseProduct Warehouse_Product[]
 
-  client   client @relation(fields: [clientID], references: [id])
-  clientID String
+  client   client @relation(fields: [clientId], references: [id])
+  clientId String
 }
 
 model Warehouse_Product {

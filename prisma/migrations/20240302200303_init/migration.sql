@@ -18,7 +18,8 @@ CREATE TABLE "client" (
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "name" TEXT,
+    "firstName" TEXT,
+    "lastName" TEXT,
     "phone" TEXT,
     "avatar" TEXT,
     "password" TEXT NOT NULL,
@@ -37,15 +38,19 @@ CREATE TABLE "Product" (
     "description" TEXT,
     "code" TEXT NOT NULL,
     "sku" TEXT,
-    "price" DOUBLE PRECISION NOT NULL,
-    "stock" INTEGER NOT NULL,
+    "baseAmount" DOUBLE PRECISION NOT NULL,
+    "taxSlab" DOUBLE PRECISION NOT NULL,
+    "taxAmount" DOUBLE PRECISION NOT NULL,
+    "totalAmount" DOUBLE PRECISION NOT NULL,
+    "otherCharges" DOUBLE PRECISION NOT NULL,
     "images" TEXT[],
+    "tags" TEXT[],
     "categoryId" TEXT NOT NULL,
-    "createdById" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
     "updatedById" TEXT NOT NULL,
+    "createdById" TEXT NOT NULL,
     "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP NOT NULL,
-    "clientID" TEXT NOT NULL,
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
 );
@@ -56,7 +61,7 @@ CREATE TABLE "Category" (
     "name" TEXT NOT NULL,
     "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP NOT NULL,
-    "clientID" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
 
     CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
 );
@@ -69,7 +74,7 @@ CREATE TABLE "Warehouse" (
     "address" TEXT NOT NULL,
     "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP NOT NULL,
-    "clientID" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
 
     CONSTRAINT "Warehouse_pkey" PRIMARY KEY ("id")
 );
@@ -87,6 +92,12 @@ CREATE TABLE "Warehouse_Product" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "client_email_key" ON "client"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "client_phone_key" ON "client"("phone");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- AddForeignKey
@@ -96,19 +107,19 @@ ALTER TABLE "User" ADD CONSTRAINT "User_clientId_fkey" FOREIGN KEY ("clientId") 
 ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Product" ADD CONSTRAINT "Product_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Product" ADD CONSTRAINT "Product_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Product" ADD CONSTRAINT "Product_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Product" ADD CONSTRAINT "Product_clientID_fkey" FOREIGN KEY ("clientID") REFERENCES "client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Product" ADD CONSTRAINT "Product_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_clientID_fkey" FOREIGN KEY ("clientID") REFERENCES "client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Category" ADD CONSTRAINT "Category_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Warehouse" ADD CONSTRAINT "Warehouse_clientID_fkey" FOREIGN KEY ("clientID") REFERENCES "client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Warehouse" ADD CONSTRAINT "Warehouse_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Warehouse_Product" ADD CONSTRAINT "Warehouse_Product_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "Warehouse"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
