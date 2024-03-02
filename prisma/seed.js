@@ -9,6 +9,15 @@ async function main() {
       name: 'John Doe',
       email: 'john@example.com',
       password: 'password',
+      role: 'ADMIN',
+      client: {
+        create: {
+          name: 'First Client',
+          email: 'john@example.com',
+          phone: '123-456-7890',
+          address: '123 Main St, City, State, ZIP',
+        },
+      }
     },
   });
 

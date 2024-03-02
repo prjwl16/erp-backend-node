@@ -13,10 +13,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model client {
+  id      String @id @default(uuid())
+  name    String
+  email   String @unique
+  phone   String @unique
+  address String
+
+  User User[]
+
+  // GST details
+
+  createdAt DateTime    @default(now()) @db.Timestamp()
+  updatedAt DateTime    @updatedAt @db.Timestamp()
+  Product   Product[]
+  Category  Category[]
+  Warehouse Warehouse[]
+}
+
 model User {
   id              String    @id @default(uuid())
   email           String    @unique
-  name            String?
+  firstName       String?
+  lastName        String?
   phone           String?
   avatar          String?
   password        String
@@ -26,6 +45,8 @@ model User {
 
   createdAt DateTime @default(now()) @db.Timestamp()
   updatedAt DateTime @updatedAt @db.Timestamp()
+  client    client?  @relation(fields: [clientId], references: [id])
+  clientId  String?
 }
 
 enum Role {
@@ -37,6 +58,8 @@ model Product {
   id          String   @id @default(uuid())
   name        String
   description String?
+  code        String
+  sku         String?
   price       Float
   stock       Int
   images      String[]
@@ -47,9 +70,12 @@ model Product {
   updatedBy   User?    @relation("UpdatedByRelation", fields: [updatedById], references: [id])
   updatedById String
 
-  createdAt        DateTime           @default(now()) @db.Timestamp()
-  updatedAt        DateTime           @updatedAt @db.Timestamp()
-  warehouseProduct WarehouseProduct[]
+  createdAt        DateTime            @default(now()) @db.Timestamp()
+  updatedAt        DateTime            @updatedAt @db.Timestamp()
+  warehouseProduct Warehouse_Product[]
+
+  client   client @relation(fields: [clientID], references: [id])
+  clientID String
 }
 
 model Category {
@@ -59,6 +85,9 @@ model Category {
   createdAt DateTime  @default(now()) @db.Timestamp()
   updatedAt DateTime  @updatedAt @db.Timestamp()
   products  Product[]
+
+  client   client @relation(fields: [clientID], references: [id])
+  clientID String
 }
 
 model Warehouse {
@@ -67,12 +96,15 @@ model Warehouse {
   location String
   address  String
 
-  createdAt        DateTime           @default(now()) @db.Timestamp()
-  updatedAt        DateTime           @updatedAt @db.Timestamp()
-  warehouseProduct WarehouseProduct[]
+  createdAt        DateTime            @default(now()) @db.Timestamp()
+  updatedAt        DateTime            @updatedAt @db.Timestamp()
+  warehouseProduct Warehouse_Product[]
+
+  client   client @relation(fields: [clientID], references: [id])
+  clientID String
 }
 
-model WarehouseProduct {
+model Warehouse_Product {
   id          String    @id @default(uuid())
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
   warehouseId String

@@ -3,10 +3,13 @@ require('dotenv').config();
 
 //express
 const express = require('express');
+const cors = require("cors");
 const app = express();
 app.use(express.json());
 
 //Routes
+
+app.use(cors());
 
 app.get('/', (req, res) => {
     console.log('GET /', req.query);

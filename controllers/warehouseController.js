@@ -28,3 +28,21 @@ exports.createWarehouse = async (req, res) => {
         });
     }
 };
+
+exports.getAllWarehouses = async (req, res) => {
+    try {
+        const warehouses = await prisma.warehouse.findMany();
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                warehouses,
+            },
+        });
+    } catch (error) {
+        res.status(400).json({
+            status: 'fail',
+            message: error.message,
+        });
+    }
+}
