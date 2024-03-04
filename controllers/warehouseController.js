@@ -66,3 +66,35 @@ exports.getAllWarehouses = async (req, res) => {
     });
   }
 }
+
+exports.getProductsByWarehouseId = async (req, res) => {
+  try {
+    const {id} = req.params;
+    const products = await prisma.warehouse_Product.findMany({
+        where: {
+          warehouseId: id,
+          warehouse: {
+            clientId: req.user.clientId
+          }
+        },
+        include: {
+          product: true
+        }
+      })
+    return res.send({
+      success: true,
+      data: {
+        total: products.length,
+        products
+      }
+    })
+
+
+  } catch (e) {
+    console.error(e);
+    return res.status(500).send({
+      success: false,
+      message: 'We f*ck up..!'
+    })
+  }
+}

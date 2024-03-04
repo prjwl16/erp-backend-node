@@ -1,58 +1,20 @@
 const {PrismaClient} = require('@prisma/client');
-const {deleteFileFromS3} = require("../utils/storage");
 const prisma = new PrismaClient();
 
 
-exports.uploadImages = async (req, res) => {
-  const images = req.files.map(file => ({
-    filename: file.originalname,
-    size: file.size,
-    mimetype: file.mimetype,
-    path: file.location
-  }));
-
-  const paths = images.map(file => file.path);
-
-  //append new images to the product
-
-  const productImages = await prisma.product.findFirst({
-    where: {id: req.params.productId},
-    select: {
-      id: true,
-      images: true
-    }
-  })
-
-  if(!productImages) {
-    return res.status(400).json({success: false, message: "Product not found"})
-  }
-  //lenght should be less than 10
-
-  if(productImages.images.length + paths.length > 2) {
-
-    //delete the uploaded images from s3
-    console.log(paths);
-    await deleteFileFromS3({bucketName: process.env.S3_BUCKET, files: paths})
-    return res.status(400).json({success: false, message: "Maximum 10 images are allowed"})
-  }
-
-  productImages.images.push(...paths)
-
-  const product = await prisma.product.update({
-    where: {id: req.params.productId},
-    data: {
-      images: productImages.images
-    },
-  });
-
-  res.status(200).json({success: true, data: product});
-
-}
-
-
 exports.createProduct = async (req, res) => {
+
+  /*
+  * if request fails at any point, let say while checking category or warehouse
+  * then will send the image path back to FE and then when hitting next request
+  * i'll send the images path (aws path) in the request... if it's valid then go ahead...
+  * */
+
   try {
-    const data = req.body;
+
+    console.log("How i got here")
+
+    const data = JSON.parse(req.body.data);
 
     if (!data) {
       return res.status(400).json({
@@ -61,11 +23,10 @@ exports.createProduct = async (req, res) => {
       });
     }
 
-    //check if code is exists
     const isProductExistsWithGiveCode = await prisma.product.findFirst({
       where: {
-        code: data.code,
-        clientId: req.user.clientid
+        code: data.productCode,
+        clientId: req.user.clientId
       },
     });
 
@@ -76,29 +37,36 @@ exports.createProduct = async (req, res) => {
       });
     }
 
-    const warehouses = data.warehouse.map(warehouse => ({
+    const warehouses = data.warehouses.map(warehouse => ({
       warehouseId: warehouse.id,
       stock: warehouse.stock
     }))
+
+    const images = req.files.map(file => ({
+      filename: file.originalname,
+      size: file.size,
+      mimetype: file.mimetype,
+      path: file.location
+    }));
+
+    const paths = images.map(file => file.path);
 
     console.log(warehouses);
 
 
     const product = await prisma.product.create({
       data: {
-        name: data.name,
-        description: data.description,
-        code: data.code,
-        sku: data.sku,
-        baseAmount: data.baseAmount || 0,
-        taxSlab: data.taxSlab || 0,
-        taxAmount: data.taxAmount || 0,
-        totalAmount: data.totalAmount || 0,
-        otherCharges: data.otherCharges || 0,
-
-        //images // will add later
-        tags: data.tags,
-
+        name: data.productName,
+        description: data.productDescription,
+        code: data.productCode,
+        sku: data.productSku,
+        baseAmount: parseFloat(data.baseAmount) || 0,
+        taxSlab: parseFloat(data.taxSlab) || 0,
+        taxAmount: parseFloat(data.taxAmount) || 0,
+        totalAmount: parseFloat(data.sellingAmount) || 0,
+        otherCharges: parseFloat(data.otherCharges || '0') || 0,
+        images: paths,
+        tags: data.tags || [],
         category: {
           connect: {
             id: data.categoryId,
@@ -110,7 +78,6 @@ exports.createProduct = async (req, res) => {
             id: req.user.client.id,
           },
         },
-
         warehouseProduct: {
           createMany: {
             data: warehouses
@@ -143,8 +110,6 @@ exports.createProduct = async (req, res) => {
       message: e.message,
     });
   }
-
-
 };
 
 exports.getProductById = async (req, res) => {
