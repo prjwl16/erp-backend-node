@@ -17,6 +17,7 @@ exports.verifyToken = async (req, res, next) => {
       if (!user) throw Error('User not found')
       req.user = user
     } catch (error) {
+      console.log('error : ', error.message)
       return res.status(403).json({
         message: "Invalid token provided",
       });

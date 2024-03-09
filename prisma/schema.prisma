@@ -13,8 +13,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model client {
-  id      String @id @default(uuid())
+model Client {
+  id      Int    @id @default(autoincrement())
   name    String
   email   String @unique
   phone   String @unique
@@ -33,7 +33,7 @@ model client {
 }
 
 model User {
-  id              String    @id @default(uuid())
+  id              Int       @id @default(autoincrement())
   email           String    @unique
   firstName       String?
   lastName        String?
@@ -44,10 +44,11 @@ model User {
   createdProducts Product[] @relation("CreatedByRelation")
   updatedProducts Product[] @relation("UpdatedByRelation")
 
-  createdAt DateTime @default(now()) @db.Timestamp()
-  updatedAt DateTime @updatedAt @db.Timestamp()
-  client    client?  @relation(fields: [clientId], references: [id])
-  clientId  String?
+  createdAt DateTime    @default(now()) @db.Timestamp()
+  updatedAt DateTime    @updatedAt @db.Timestamp()
+  client    Client?     @relation(fields: [clientId], references: [id])
+  clientId  Int?
+  Warehouse Warehouse[]
 }
 
 enum Role {
@@ -56,7 +57,7 @@ enum Role {
 }
 
 model Product {
-  id          String  @id @default(uuid())
+  id          Int     @id @default(autoincrement())
   name        String
   description String?
   code        String
@@ -72,34 +73,55 @@ model Product {
   images String[]
   tags   String[]
 
-  category         Category            @relation(fields: [categoryId], references: [id])
-  categoryId       String
-  client           client              @relation(fields: [clientId], references: [id])
-  clientId         String
+  category         Category[]
+  client           Client              @relation(fields: [clientId], references: [id])
+  clientId         Int
   warehouseProduct Warehouse_Product[]
 
-  updatedBy   User?    @relation("UpdatedByRelation", fields: [updatedById], references: [id])
-  updatedById String
-  createdBy   User     @relation("CreatedByRelation", fields: [createdById], references: [id])
-  createdById String
-  createdAt   DateTime @default(now()) @db.Timestamp()
-  updatedAt   DateTime @updatedAt @db.Timestamp()
+  updatedBy     User?       @relation("UpdatedByRelation", fields: [updatedById], references: [id])
+  updatedById   Int
+  createdBy     User        @relation("CreatedByRelation", fields: [createdById], references: [id])
+  createdById   Int
+  createdAt     DateTime    @default(now()) @db.Timestamp()
+  updatedAt     DateTime    @updatedAt @db.Timestamp()
+  ProductType   ProductType @relation(fields: [productTypeId], references: [id])
+  productTypeId Int
+}
+
+model ProductType {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  createdAt DateTime  @default(now()) @db.Timestamp()
+  updatedAt DateTime  @updatedAt @db.Timestamp()
+  products  Product[]
 }
 
 model Category {
-  id   String @id @default(uuid())
+  id   Int    @id @default(autoincrement())
   name String
 
   createdAt DateTime  @default(now()) @db.Timestamp()
   updatedAt DateTime  @updatedAt @db.Timestamp()
   products  Product[]
 
-  client   client @relation(fields: [clientId], references: [id])
-  clientId String
+  client      Client        @relation(fields: [clientId], references: [id])
+  clientId    Int
+  subCategory subCategory[]
+}
+
+model subCategory {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  createdAt  DateTime @default(now()) @db.Timestamp()
+  updatedAt  DateTime @updatedAt @db.Timestamp()
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId Int
 }
 
 model Warehouse {
-  id       String @id @default(uuid())
+  id       Int    @id @default(autoincrement())
   name     String
   location String
   address  String
@@ -108,16 +130,19 @@ model Warehouse {
   updatedAt        DateTime            @updatedAt @db.Timestamp()
   warehouseProduct Warehouse_Product[]
 
-  client   client @relation(fields: [clientId], references: [id])
-  clientId String
+  manager   User? @relation(fields: [managerId], references: [id])
+  managerId Int?
+
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId Int
 }
 
 model Warehouse_Product {
-  id          String    @id @default(uuid())
+  id          Int       @id @default(autoincrement())
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
-  warehouseId String
+  warehouseId Int
   product     Product   @relation(fields: [productId], references: [id])
-  productId   String
+  productId   Int
   stock       Int
 
   createdAt DateTime @default(now()) @db.Timestamp()

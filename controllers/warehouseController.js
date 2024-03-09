@@ -1,10 +1,7 @@
-// controllers/warehouseController.js
-
-const {PrismaClient} = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require("../prisma");
 
 exports.createWarehouse = async (req, res) => {
-  const {name, location, address} = req.body;
+  const {name, location, address, managerId} = req.body;
 
   try {
 
@@ -22,14 +19,28 @@ exports.createWarehouse = async (req, res) => {
       });
     }
 
-    const newWarehouse = await prisma.warehouse.create({
+    let newWarehouse = {
       data: {
         name,
         location,
         address,
-        clientId: req.user.clientId,
+        client: {
+          connect: {
+            id: req.user.clientId,
+          },
+        },
       },
-    });
+    }
+
+    if(managerId){
+      newWarehouse.data.manager = {
+        connect: {
+          id: managerId
+        }
+      }
+    }
+
+    newWarehouse = await prisma.warehouse.create(newWarehouse);
 
     res.status(201).json({
       status: 'success',
@@ -38,6 +49,7 @@ exports.createWarehouse = async (req, res) => {
       },
     });
   } catch (error) {
+    console.log('error : ', error.message)
     res.status(400).json({
       status: 'fail',
       message: error.message,
@@ -51,6 +63,17 @@ exports.getAllWarehouses = async (req, res) => {
       where: {
         clientId: req.user.clientId,
       },
+      include: {
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          }
+        }
+      }
     });
 
     res.status(200).json({
@@ -71,16 +94,16 @@ exports.getProductsByWarehouseId = async (req, res) => {
   try {
     const {id} = req.params;
     const products = await prisma.warehouse_Product.findMany({
-        where: {
-          warehouseId: id,
-          warehouse: {
-            clientId: req.user.clientId
-          }
-        },
-        include: {
-          product: true
+      where: {
+        warehouseId: id,
+        warehouse: {
+          clientId: req.user.clientId
         }
-      })
+      },
+      include: {
+        product: true
+      }
+    })
     return res.send({
       success: true,
       data: {
@@ -88,7 +111,6 @@ exports.getProductsByWarehouseId = async (req, res) => {
         products
       }
     })
-
 
   } catch (e) {
     console.error(e);

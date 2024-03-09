@@ -1,6 +1,4 @@
-const {PrismaClient} = require('@prisma/client');
-const prisma = new PrismaClient();
-
+const prisma = require("../prisma");
 exports.createCategory = async (req, res) => {
   const {name} = req.body;
   //check if already exists for the client

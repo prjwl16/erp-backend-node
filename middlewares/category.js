@@ -3,6 +3,7 @@ exports.isValidCategory = async (req, res, next) => {
   try {
     const data = JSON.parse(req.body.data)
     console.log("Data: ", data);
+    console.log("Req: ", req.user.clientId);
 
     if (data.categoryId) {
       const category = await prisma.category.findFirst({

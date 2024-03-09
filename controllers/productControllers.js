@@ -1,5 +1,4 @@
-const {PrismaClient} = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require("../prisma");
 
 
 exports.createProduct = async (req, res) => {
@@ -11,8 +10,6 @@ exports.createProduct = async (req, res) => {
   * */
 
   try {
-
-    console.log("How i got here")
 
     const data = JSON.parse(req.body.data);
 
@@ -51,7 +48,9 @@ exports.createProduct = async (req, res) => {
 
     const paths = images.map(file => file.path);
 
-    console.log(warehouses);
+    const categories = data.category.map(category => ({
+      id: category.id
+    }));
 
 
     const product = await prisma.product.create({
@@ -67,12 +66,10 @@ exports.createProduct = async (req, res) => {
         otherCharges: parseFloat(data.otherCharges || '0') || 0,
         images: paths,
         tags: data.tags || [],
+        //connect to many category
         category: {
-          connect: {
-            id: data.categoryId,
-          },
+          connect: categories
         },
-
         client: {
           connect: {
             id: req.user.client.id,

@@ -12,6 +12,7 @@ router.use('/api/product',verifyToken, require('./productRoutes'));
 router.use('/api/user',verifyToken, require('./userRoutes'));
 router.use('/api/category',verifyToken, require('./categoryRoutes'));
 router.use('/api/warehouse',verifyToken, require('./warehouseRoutes'));
+router.use('/api/tags',verifyToken, require('./tags'));
 
 
 module.exports = router;

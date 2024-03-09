@@ -1,3 +1,5 @@
+const prisma = require("../prisma");
+
 exports.getUser =async(req,res)=> {
 
     const user = await prisma.user.findUnique({
@@ -12,9 +14,6 @@ exports.getUser =async(req,res)=> {
     res.status(200).json(user);
 
 }
-
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 
 exports.createUser = async (req, res) => {
     const { name, email, password } = req.body;
@@ -41,3 +40,30 @@ exports.createUser = async (req, res) => {
         });
     }
 };
+
+exports.getAllUsers = async (req, res) => {
+    const { clientId } = req.user.clientId;
+
+    const users = await prisma.user.findMany({
+        where: {
+            clientId: clientId,
+        },
+        select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            avatar: true,
+            role: true,
+            phone: true,
+        },
+    });
+
+    res.status(200).json({
+        status: 'success',
+        results: users.length,
+        data: {
+            users,
+        },
+    });
+}
