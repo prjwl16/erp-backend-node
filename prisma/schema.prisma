@@ -25,11 +25,12 @@ model Client {
 
   // GST details
 
-  createdAt DateTime    @default(now()) @db.Timestamp()
-  updatedAt DateTime    @updatedAt @db.Timestamp()
-  Product   Product[]
-  Category  Category[]
-  Warehouse Warehouse[]
+  createdAt   DateTime      @default(now()) @db.Timestamp()
+  updatedAt   DateTime      @updatedAt @db.Timestamp()
+  Product     Product[]
+  Category    Category[]
+  Warehouse   Warehouse[]
+  ProductType ProductType[]
 }
 
 model User {
@@ -92,9 +93,13 @@ model ProductType {
   id   Int    @id @default(autoincrement())
   name String
 
-  createdAt DateTime  @default(now()) @db.Timestamp()
-  updatedAt DateTime  @updatedAt @db.Timestamp()
-  products  Product[]
+  createdAt DateTime @default(now()) @db.Timestamp()
+  updatedAt DateTime @updatedAt @db.Timestamp()
+
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId Int
+
+  products Product[]
 }
 
 model Category {
