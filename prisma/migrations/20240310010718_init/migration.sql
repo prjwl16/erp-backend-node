@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "TRANSACTION_MODE" AS ENUM ('CASH', 'CARD', 'UPI', 'NET_BANKING', 'CHEQUE', 'OTHER');
+
+-- AlterTable
+ALTER TABLE "PurchaseOrderTransaction" ADD COLUMN     "transactionMode" "TRANSACTION_MODE" NOT NULL DEFAULT 'CASH';

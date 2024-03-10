@@ -25,12 +25,14 @@ model Client {
 
   // GST details
 
-  createdAt   DateTime      @default(now()) @db.Timestamp()
-  updatedAt   DateTime      @updatedAt @db.Timestamp()
-  Product     Product[]
-  Category    Category[]
-  Warehouse   Warehouse[]
-  ProductType ProductType[]
+  createdAt     DateTime        @default(now()) @db.Timestamp()
+  updatedAt     DateTime        @updatedAt @db.Timestamp()
+  Product       Product[]
+  Category      Category[]
+  Warehouse     Warehouse[]
+  ProductType   ProductType[]
+  Supplier      Supplier[]
+  PurchaseOrder PurchaseOrder[]
 }
 
 model User {
@@ -45,11 +47,13 @@ model User {
   createdProducts Product[] @relation("CreatedByRelation")
   updatedProducts Product[] @relation("UpdatedByRelation")
 
-  createdAt DateTime    @default(now()) @db.Timestamp()
-  updatedAt DateTime    @updatedAt @db.Timestamp()
-  client    Client?     @relation(fields: [clientId], references: [id])
-  clientId  Int?
-  Warehouse Warehouse[]
+  createdAt     DateTime        @default(now()) @db.Timestamp()
+  updatedAt     DateTime        @updatedAt @db.Timestamp()
+  client        Client?         @relation(fields: [clientId], references: [id])
+  clientId      Int?
+  Warehouse     Warehouse[]
+  Supplier      Supplier[]
+  PurchaseOrder PurchaseOrder[]
 }
 
 enum Role {
@@ -152,4 +156,93 @@ model Warehouse_Product {
 
   createdAt DateTime @default(now()) @db.Timestamp()
   updatedAt DateTime @updatedAt @db.Timestamp()
+}
+
+// Money money
+
+model Supplier {
+  id      Int    @id @default(autoincrement())
+  name    String
+  email   String
+  phone   String
+  address String
+
+  createdAt     DateTime        @default(now()) @db.Timestamp()
+  updatedAt     DateTime        @updatedAt @db.Timestamp()
+  client        Client          @relation(fields: [clientId], references: [id])
+  clientId      Int
+  PurchaseOrder PurchaseOrder[]
+
+  // createdBy user
+  createdBy   User? @relation(fields: [createdById], references: [id])
+  createdById Int?
+}
+
+model PurchaseOrder {
+  id Int @id @default(autoincrement())
+
+  name        String?
+  description String?
+
+  supplier     Supplier @relation(fields: [supplierId], references: [id])
+  supplierId   Int
+  quantity     Int
+  baseAmount   Float
+  taxAmount    Float
+  totalAmount  Float
+  otherCharges Float
+
+  // virtual fields
+  amountPaid     Float
+  amountDue      Float
+  amountReceived Float
+
+  orderStatus   PURCHASE_ORDER_STATUS         @default(PLACED)
+  paymentStatus PURCHASE_ORDER_PAYMENT_STATUS @default(UNPAID)
+
+  createdBy   User? @relation(fields: [createdById], references: [id])
+  createdById Int?
+
+  createdAt                DateTime                   @default(now()) @db.Timestamp()
+  updatedAt                DateTime                   @updatedAt @db.Timestamp()
+  client                   Client                     @relation(fields: [clientId], references: [id])
+  clientId                 Int
+  PurchaseOrderTransaction PurchaseOrderTransaction[]
+  products                 Product[]
+}
+
+model PurchaseOrderTransaction {
+  id              Int           @id @default(autoincrement())
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+  amount          Float
+
+  transactionDate         DateTime
+  externalReferenceNumber String?
+
+  transactionMode TRANSACTION_MODE @default(CASH)
+
+  createdAt DateTime @default(now()) @db.Timestamp()
+  updatedAt DateTime @updatedAt @db.Timestamp()
+}
+
+enum PURCHASE_ORDER_STATUS {
+  PLACED
+  IN_TRANSIT
+  RECEIVED
+}
+
+enum PURCHASE_ORDER_PAYMENT_STATUS {
+  PAID
+  PARTIALLY_PAID
+  UNPAID
+}
+
+enum TRANSACTION_MODE {
+  CASH
+  CARD
+  UPI
+  NET_BANKING
+  CHEQUE
+  OTHER
 }
