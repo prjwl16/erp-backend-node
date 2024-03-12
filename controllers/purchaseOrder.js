@@ -1,20 +1,48 @@
 const prisma = require('../prisma')
+const { success, serverError, invalidRequest } = require('../utils/response')
+
+const limit = 10
 
 exports.createPurchaseOrder = async (req, res) => {
-  const {
+  let {
+    name,
+    description,
+    notes,
     supplierId,
     totalAmount,
     baseAmount,
-    quantity,
     taxAmount,
     otherCharges,
-    amountDue,
-    amountPaid,
-    amountReceived,
-    name,
-    description,
+    advancePaid,
+    quantity,
   } = req.body
   const { id: createdBy } = req.user
+
+  advancePaid = advancePaid || 0
+  const totalAmountDue = totalAmount - advancePaid
+  const totalAmountPaid = advancePaid
+  const paymentStatus = advancePaid === totalAmount ? 'PAID' : advancePaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID'
+
+  // check if the total amount is greater than other components
+  if (totalAmount <= 0) {
+    return invalidRequest(res, 'Total amount cannot be negative or zero')
+  }
+  if (totalAmount < advancePaid) {
+    return invalidRequest(res, 'Total amount cannot be less than advance paid')
+  }
+  if (totalAmount !== baseAmount + taxAmount + otherCharges) {
+    return invalidRequest(res, 'Total amount should be equal to base amount + tax amount + other charges')
+  }
+
+  // check if the supplier exists
+  const supplier = await prisma.supplier.findUnique({
+    where: {
+      id: supplierId,
+    },
+  })
+  if (!supplier) {
+    return invalidRequest(res, 'Supplier not found')
+  }
 
   try {
     const newPurchaseOrder = await prisma.purchaseOrder.create({
@@ -27,15 +55,17 @@ exports.createPurchaseOrder = async (req, res) => {
           },
         },
         quantity,
+        notes,
         baseAmount,
         taxAmount,
         totalAmount,
         otherCharges,
+        paymentStatus,
 
-        amountDue,
-        amountPaid,
-        amountReceived,
-
+        // these could be calculated from the transaction table but for now we are keeping it simple
+        totalAmountDue, // Amount which client is yet to pay to the supplier
+        totalAmountPaid, // Amount which client has already paid to the supplier
+        advancePaid, // Amount which client has already paid to the supplier as advance (not related to the purchase order transaction)
         client: {
           connect: {
             id: req.user.clientId,
@@ -48,17 +78,16 @@ exports.createPurchaseOrder = async (req, res) => {
         },
       },
     })
-    res.status(200).json(newPurchaseOrder)
+    success(res, newPurchaseOrder, 'Purchase order added successfully')
   } catch (error) {
     console.log(error)
-    res.status(500).json({ status: 'fail', error: 'Failed to add the purchase order' })
+    serverError(res, 'Failed to add the purchase order')
   }
 }
 
 exports.getPurchaseOrderById = async (req, res) => {
-  const id = parseInt(req.params.id)
-
   try {
+    const id = parseInt(req.params.id)
     const purchaseOrder = await prisma.purchaseOrder.findUnique({
       where: {
         id: id,
@@ -67,15 +96,16 @@ exports.getPurchaseOrderById = async (req, res) => {
         PurchaseOrderTransaction: true,
       },
     })
-    res.status(200).json(purchaseOrder)
+    success(res, purchaseOrder, 'Purchase order fetched successfully')
   } catch (error) {
     console.log(error)
-    res.status(500).json({ status: 'fail', error: 'Failed to fetch purchase order' })
+    serverError(res, 'Failed to fetch the purchase order')
   }
 }
 
 exports.getAllPurchaseOrders = async (req, res) => {
   try {
+    const { page } = req.query
     const purchaseOrders = await prisma.purchaseOrder.findMany({
       where: {
         clientId: req.user.clientId,
@@ -84,10 +114,12 @@ exports.getAllPurchaseOrders = async (req, res) => {
         supplier: true,
         createdBy: true,
       },
+      skip: (page - 1) * limit,
+      take: limit,
     })
-    res.status(200).json(purchaseOrders)
+    success(res, purchaseOrders, 'Purchase orders fetched successfully')
   } catch (error) {
     console.log(error)
-    res.status(500).json({ status: 'fail', error: 'Failed to fetch purchase orders' })
+    serverError(res, 'Failed to fetch the purchase orders')
   }
 }

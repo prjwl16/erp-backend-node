@@ -185,20 +185,24 @@ model PurchaseOrder {
 
   name        String?
   description String?
+  notes       String?
 
-  supplier     Supplier @relation(fields: [supplierId], references: [id])
-  supplierId   Int
-  quantity     Int
-  baseAmount   Float
-  taxAmount    Float
-  totalAmount  Float
-  otherCharges Float
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  supplierId Int
+  quantity   Int
+
+  // Amounts
+  baseAmount   Float @default(0)
+  taxAmount    Float @default(0)
+  totalAmount  Float @default(0)
+  otherCharges Float @default(0)
 
   // virtual fields
-  amountPaid     Float
-  amountDue      Float
-  amountReceived Float
+  totalAmountPaid Float @default(0)
+  advancePaid     Float @default(0) // the amount paid in advance (not recorded in transactions)
+  totalAmountDue  Float @default(0)
 
+  // dates
   orderStatus   PURCHASE_ORDER_STATUS         @default(PLACED)
   paymentStatus PURCHASE_ORDER_PAYMENT_STATUS @default(UNPAID)
 
@@ -218,6 +222,7 @@ model PurchaseOrderTransaction {
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
   purchaseOrderId Int
   amount          Float
+  remarks         String?
 
   transactionDate         DateTime
   externalReferenceNumber String?
