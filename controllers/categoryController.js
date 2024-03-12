@@ -103,17 +103,15 @@ exports.deleteCategory = async (req, res) => {
       })
     }
 
-    const category = await prisma.category.delete({
-      where: {
-        id: id,
-      },
-    })
+    // const category = await prisma.category.delete({
+    //   where: {
+    //     id: id,
+    //   },
+    // })
 
     res.status(200).json({
       status: 'success',
-      data: {
-        category,
-      },
+      data: {},
     })
   } catch (error) {
     console.log(error)

@@ -57,7 +57,10 @@ exports.getSuppliers = async (req, res) => {
         clientId: req.user.clientId,
       },
     })
-    res.status(200).json(suppliers)
+    res.status(200).json({
+      status: 'success',
+      data: { suppliers },
+    })
   } catch (error) {
     console.log(error)
     res.status(500).json({ status: 'fail', error: 'Failed to fetch suppliers' })

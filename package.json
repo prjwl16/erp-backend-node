@@ -17,12 +17,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "prisma": "^5.10.2"
+    "prisma": "^5.11.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.525.0",
     "@aws-sdk/lib-storage": "^3.525.1",
-    "@prisma/client": "^5.10.2",
+    "@prisma/client": "^5.11.0",
     "aws-sdk": "^2.1569.0",
     "bcrypt": "^5.1.1",
     "busboy": "^1.6.0",

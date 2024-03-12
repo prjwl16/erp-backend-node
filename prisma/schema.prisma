@@ -83,14 +83,16 @@ model Product {
   clientId         Int
   warehouseProduct Warehouse_Product[]
 
-  updatedBy     User?       @relation("UpdatedByRelation", fields: [updatedById], references: [id])
-  updatedById   Int
-  createdBy     User        @relation("CreatedByRelation", fields: [createdById], references: [id])
-  createdById   Int
-  createdAt     DateTime    @default(now()) @db.Timestamp()
-  updatedAt     DateTime    @updatedAt @db.Timestamp()
-  ProductType   ProductType @relation(fields: [productTypeId], references: [id])
-  productTypeId Int
+  updatedBy       User?          @relation("UpdatedByRelation", fields: [updatedById], references: [id])
+  updatedById     Int
+  createdBy       User           @relation("CreatedByRelation", fields: [createdById], references: [id])
+  createdById     Int
+  createdAt       DateTime       @default(now()) @db.Timestamp()
+  updatedAt       DateTime       @updatedAt @db.Timestamp()
+  ProductType     ProductType    @relation(fields: [productTypeId], references: [id])
+  productTypeId   Int
+  PurchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int?
 }
 
 model ProductType {
