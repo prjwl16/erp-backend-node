@@ -16,35 +16,24 @@ exports.createPurchaseOrder = async (req, res) => {
     advancePaid,
     quantity,
   } = req.body
-  const { id: createdBy } = req.user
-
-  advancePaid = advancePaid || 0
-  const totalAmountDue = totalAmount - advancePaid
-  const totalAmountPaid = advancePaid
-  const paymentStatus = advancePaid === totalAmount ? 'PAID' : advancePaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID'
-
-  // check if the total amount is greater than other components
-  if (totalAmount <= 0) {
-    return invalidRequest(res, 'Total amount cannot be negative or zero')
-  }
-  if (totalAmount < advancePaid) {
-    return invalidRequest(res, 'Total amount cannot be less than advance paid')
-  }
-  if (totalAmount !== baseAmount + taxAmount + otherCharges) {
-    return invalidRequest(res, 'Total amount should be equal to base amount + tax amount + other charges')
-  }
-
-  // check if the supplier exists
-  const supplier = await prisma.supplier.findUnique({
-    where: {
-      id: supplierId,
-    },
-  })
-  if (!supplier) {
-    return invalidRequest(res, 'Supplier not found')
-  }
-
   try {
+    const { id: createdBy } = req.user
+
+    advancePaid = advancePaid || 0
+    const totalAmountDue = totalAmount - advancePaid
+    const totalAmountPaid = advancePaid
+    const paymentStatus = advancePaid === totalAmount ? 'PAID' : advancePaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID'
+
+    // check if the supplier exists
+    const supplier = await prisma.supplier.findUnique({
+      where: {
+        id: supplierId,
+      },
+    })
+    if (!supplier) {
+      return invalidRequest(res, 'Supplier not found')
+    }
+
     const newPurchaseOrder = await prisma.purchaseOrder.create({
       data: {
         name,
@@ -96,7 +85,7 @@ exports.getPurchaseOrderById = async (req, res) => {
         PurchaseOrderTransaction: true,
       },
     })
-    success(res, purchaseOrder, 'Purchase order fetched successfully')
+    success(res, { purchaseOrder }, 'Purchase order fetched successfully')
   } catch (error) {
     console.log(error)
     serverError(res, 'Failed to fetch the purchase order')
@@ -116,8 +105,16 @@ exports.getAllPurchaseOrders = async (req, res) => {
       },
       skip: (page - 1) * limit,
       take: limit,
+      orderBy: {
+        createdAt: 'desc',
+      },
     })
-    success(res, purchaseOrders, 'Purchase orders fetched successfully')
+    const totalPurchaseOrders = await prisma.purchaseOrder.count({
+      where: {
+        clientId: req.user.clientId,
+      },
+    })
+    success(res, { purchaseOrders, totalPurchaseOrders }, 'Purchase orders fetched successfully')
   } catch (error) {
     console.log(error)
     serverError(res, 'Failed to fetch the purchase orders')
