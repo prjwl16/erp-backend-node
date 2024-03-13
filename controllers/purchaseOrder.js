@@ -94,10 +94,12 @@ exports.getPurchaseOrderById = async (req, res) => {
 
 exports.getAllPurchaseOrders = async (req, res) => {
   try {
-    const { page } = req.query
+    const { page, orderStatus, paymentStatus } = req.query
     const purchaseOrders = await prisma.purchaseOrder.findMany({
       where: {
         clientId: req.user.clientId,
+        orderStatus: orderStatus || undefined,
+        paymentStatus: paymentStatus || undefined,
       },
       include: {
         supplier: true,
@@ -112,6 +114,8 @@ exports.getAllPurchaseOrders = async (req, res) => {
     const totalPurchaseOrders = await prisma.purchaseOrder.count({
       where: {
         clientId: req.user.clientId,
+        orderStatus: orderStatus || undefined,
+        paymentStatus: paymentStatus || undefined,
       },
     })
     success(res, { purchaseOrders, totalPurchaseOrders }, 'Purchase orders fetched successfully')
@@ -120,3 +124,4 @@ exports.getAllPurchaseOrders = async (req, res) => {
     serverError(res, 'Failed to fetch the purchase orders')
   }
 }
+
