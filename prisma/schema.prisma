@@ -47,13 +47,14 @@ model User {
   createdProducts Product[] @relation("CreatedByRelation")
   updatedProducts Product[] @relation("UpdatedByRelation")
 
-  createdAt     DateTime        @default(now()) @db.Timestamp()
-  updatedAt     DateTime        @updatedAt @db.Timestamp()
-  client        Client?         @relation(fields: [clientId], references: [id])
-  clientId      Int?
-  Warehouse     Warehouse[]
-  Supplier      Supplier[]
-  PurchaseOrder PurchaseOrder[]
+  createdAt              DateTime                 @default(now()) @db.Timestamp()
+  updatedAt              DateTime                 @updatedAt @db.Timestamp()
+  client                 Client?                  @relation(fields: [clientId], references: [id])
+  clientId               Int?
+  Warehouse              Warehouse[]
+  Supplier               Supplier[]
+  PurchaseOrder          PurchaseOrder[]
+  PurchaseOrderStatusLog PurchaseOrderStatusLog[]
 }
 
 enum Role {
@@ -215,6 +216,21 @@ model PurchaseOrder {
   clientId                 Int
   PurchaseOrderTransaction PurchaseOrderTransaction[]
   products                 Product[]
+  PurchaseOrderStatusLog   PurchaseOrderStatusLog[]
+}
+
+model PurchaseOrderStatusLog {
+  id              Int                   @id @default(autoincrement())
+  purchaseOrder   PurchaseOrder         @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+  status          PURCHASE_ORDER_STATUS
+  remarks         String?
+  note            String?
+
+  updatedBy   User?    @relation(fields: [updatedById], references: [id])
+  updatedById Int?
+  createdAt   DateTime @default(now()) @db.Timestamp()
+  updatedAt   DateTime @updatedAt @db.Timestamp()
 }
 
 model PurchaseOrderTransaction {
@@ -236,7 +252,7 @@ model PurchaseOrderTransaction {
 enum PURCHASE_ORDER_STATUS {
   PLACED
   IN_TRANSIT
-  RECEIVED
+  DELIVERED
 }
 
 enum PURCHASE_ORDER_PAYMENT_STATUS {

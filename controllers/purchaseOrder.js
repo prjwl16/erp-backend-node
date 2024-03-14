@@ -35,39 +35,51 @@ exports.createPurchaseOrder = async (req, res) => {
     }
 
     const newPurchaseOrder = await prisma.purchaseOrder.create({
-      data: {
-        name,
-        description,
-        supplier: {
-          connect: {
-            id: supplierId,
+        data: {
+          name,
+          description,
+          supplier: {
+            connect: {
+              id: supplierId,
+            },
           },
-        },
-        quantity,
-        notes,
-        baseAmount,
-        taxAmount,
-        totalAmount,
-        otherCharges,
-        paymentStatus,
+          quantity,
+          notes,
+          baseAmount,
+          taxAmount,
+          totalAmount,
+          otherCharges,
+          paymentStatus,
 
-        // these could be calculated from the transaction table but for now we are keeping it simple
-        totalAmountDue, // Amount which client is yet to pay to the supplier
-        totalAmountPaid, // Amount which client has already paid to the supplier
-        advancePaid, // Amount which client has already paid to the supplier as advance (not related to the purchase order transaction)
-        client: {
-          connect: {
-            id: req.user.clientId,
+          PurchaseOrderStatusLog: {
+            create: {
+              remarks: 'Purchase order created',
+              status: 'PLACED',
+              updatedBy: {
+                connect: {
+                  id: createdBy,
+                },
+              },
+            },
           },
-        },
-        createdBy: {
-          connect: {
-            id: createdBy,
+
+          // these could be calculated from the transaction table but for now we are keeping it simple
+          totalAmountDue, // Amount which client is yet to pay to the supplier
+          totalAmountPaid, // Amount which client has already paid to the supplier
+          advancePaid, // Amount which client has already paid to the supplier as advance (not related to the purchase order transaction)
+          client: {
+            connect: {
+              id: req.user.clientId,
+            },
           },
-        },
-      },
-    })
-    success(res, newPurchaseOrder, 'Purchase order added successfully')
+          createdBy: {
+            connect: {
+              id: createdBy,
+            },
+          },
+        }}
+    )
+    success(res, { newPurchaseOrder }, 'Purchase order added successfully')
   } catch (error) {
     console.log(error)
     serverError(res, 'Failed to add the purchase order')
@@ -82,7 +94,17 @@ exports.getPurchaseOrderById = async (req, res) => {
         id: id,
       },
       include: {
-        PurchaseOrderTransaction: true,
+        PurchaseOrderTransaction: {
+          orderBy: {
+            createdAt: 'desc',
+          }
+        },
+        supplier: true,
+        PurchaseOrderStatusLog: {
+          orderBy: {
+            createdAt: 'desc',
+          }
+        },
       },
     })
     success(res, { purchaseOrder }, 'Purchase order fetched successfully')
@@ -122,6 +144,51 @@ exports.getAllPurchaseOrders = async (req, res) => {
   } catch (error) {
     console.log(error)
     serverError(res, 'Failed to fetch the purchase orders')
+  }
+}
+
+exports.updatePurchaseOrderStatus = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    const { orderStatus } = req.body
+
+    if (!orderStatus) {
+      return invalidRequest(res, 'Order status is required')
+    }
+
+
+    const [updatedPurchaseOrder, newLog] = await prisma.$transaction([
+      prisma.purchaseOrder.update({
+        where: {
+          id,
+        },
+        data: {
+          orderStatus,
+        },
+      }),
+      prisma.purchaseOrderStatusLog.create({
+        data: {
+          remarks: `Order status updated to ${orderStatus}`,
+          purchaseOrder: {
+            connect: {
+              id,
+            },
+          },
+          status: orderStatus,
+          updatedBy: {
+            connect: {
+              id: req.user.id,
+            },
+          },
+        },
+      }),
+    ])
+
+    success(res, { updatedPurchaseOrder, newLog }, 'Purchase order status updated successfully')
+
+  } catch (error) {
+    console.log(error)
+    serverError(res, 'Failed to update the purchase order status')
   }
 }
 
