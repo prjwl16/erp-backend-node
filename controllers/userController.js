@@ -1,16 +1,14 @@
 import { Router } from 'express'
+import { serverError, success } from '../utils/response.js'
 
 const getUser = async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
   })
   if (!user) {
-    return res.status(404).json({
-      status: 'fail',
-      message: 'User not found',
-    })
+    return serverError(res, 'User not found')
   }
-  res.status(200).json(user)
+  return success(res, { user }, 'User fetched successfully')
 }
 
 const createUser = async (req, res) => {
@@ -25,17 +23,10 @@ const createUser = async (req, res) => {
       },
     })
 
-    res.status(201).json({
-      status: 'success',
-      data: {
-        user: newUser,
-      },
-    })
+    return success(res, { user: newUser }, 'User created successfully')
   } catch (error) {
-    res.status(400).json({
-      status: 'fail',
-      message: error.message,
-    })
+    console.log(error)
+    return serverError(res, 'Failed to create the user')
   }
 }
 
@@ -57,13 +48,7 @@ const getAllUsers = async (req, res) => {
     },
   })
 
-  res.status(200).json({
-    status: 'success',
-    results: users.length,
-    data: {
-      users,
-    },
-  })
+  return success(res, { users }, 'Users fetched successfully')
 }
 
 const userRouter = Router()

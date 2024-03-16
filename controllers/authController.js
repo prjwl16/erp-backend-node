@@ -2,19 +2,16 @@ import { checkIfAlreadyRegistered, comparePassword, hashPassword } from '../util
 import prisma from '../prisma.js'
 import jwt from 'jsonwebtoken'
 import { Router } from 'express'
+import { invalidRequest, serverError, success } from '../utils/response.js'
 
 const check = async (req, res) => {
   const isExists = await checkIfAlreadyRegistered(req.body)
 
   if (isExists) {
-    return res.status(400).json({
-      message: 'Client already exists with this email',
-    })
+    return invalidRequest(res, 'Client already exists with this email')
   }
 
-  res.status(200).json({
-    message: 'Client does not exists with this email',
-  })
+  return success(res, null, 'Client does not exists with this email')
 }
 
 const register = async (req, res) => {
@@ -23,9 +20,7 @@ const register = async (req, res) => {
   const { isExists, message } = await checkIfAlreadyRegistered({ email, phone })
 
   if (isExists) {
-    return res.status(400).json({
-      message: message,
-    })
+    return invalidRequest(res, message)
   }
 
   const hashedPassword = await hashPassword(password)
@@ -50,9 +45,7 @@ const register = async (req, res) => {
   })
 
   if (!userClient) {
-    return res.status(400).json({
-      message: 'Client not registered',
-    })
+    return serverError(res, 'Failed to create the client')
   }
 
   userClient.password = undefined
@@ -66,10 +59,7 @@ const register = async (req, res) => {
 
   user.password = undefined
 
-  return res.status(201).json({
-    message: 'Client registered successfully',
-    data: user,
-  })
+  return success(res, { user }, 'Client created successfully')
 }
 
 const login = async (req, res) => {
@@ -94,9 +84,7 @@ const login = async (req, res) => {
   })
 
   if (!user || !(await comparePassword(password, user.password))) {
-    return res.status(401).json({
-      message: 'Invalid credentials',
-    })
+    return invalidRequest(res, 'Invalid email or password')
   }
 
   user.password = undefined

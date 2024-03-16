@@ -1,4 +1,5 @@
 import prisma from '../prisma.js'
+import { invalidRequest } from '../utils/response.js'
 
 export const isValidCategory = async (req, res, next) => {
   try {
@@ -15,14 +16,11 @@ export const isValidCategory = async (req, res, next) => {
       })
       if (category) next()
       else {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Invalid category',
-        })
+        return invalidRequest(res, 'Invalid category')
       }
     } else if (data.categories) {
       const categoryIds = data.categories.map((category) => category.id)
-      const categories = await prisma.warehouse.findMany({
+      const categories = await prisma.category.findMany({
         where: {
           id: {
             in: categoryIds,
@@ -32,25 +30,13 @@ export const isValidCategory = async (req, res, next) => {
       })
       if (categories && categoryIds.length === categories.length) next()
       else {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Invalid categories',
-        })
+        return invalidRequest(res, 'Invalid categories')
       }
     } else {
-      return res.status(400).json({
-        status: 'fail',
-        data: {
-          key: 'categories',
-        },
-        message: 'Please select valid warehouse',
-      })
+      return invalidRequest(res, 'Please select valid category')
     }
   } catch (e) {
     console.error('Err: ', e)
-    return res.status(400).json({
-      success: false,
-      message: 'Failed to validate warehouse data',
-    })
+    return invalidRequest(res, 'Failed to validate category data')
   }
 }

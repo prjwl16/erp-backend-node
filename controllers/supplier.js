@@ -1,5 +1,6 @@
 import prisma from '../prisma.js'
 import { Router } from 'express'
+import { invalidRequest, serverError, success } from '../utils/response.js'
 
 const createSupplier = async (req, res) => {
   const { name, email, phone, address } = req.body
@@ -21,10 +22,7 @@ const createSupplier = async (req, res) => {
     })
 
     if (supplier) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'Supplier already exists with same email or phone',
-      })
+      return invalidRequest(res, 'Supplier already exists')
     }
 
     const newSupplier = await prisma.supplier.create({
@@ -45,10 +43,10 @@ const createSupplier = async (req, res) => {
         },
       },
     })
-    res.status(200).json(newSupplier)
+    return success(res, { supplier: newSupplier }, 'Supplier created successfully')
   } catch (error) {
     console.log(error)
-    res.status(500).json({ status: 'fail', error: 'Failed to add the supplier' })
+    return serverError(res, 'Failed to create the supplier')
   }
 }
 
@@ -59,13 +57,11 @@ const getSuppliers = async (req, res) => {
         clientId: req.user.clientId,
       },
     })
-    res.status(200).json({
-      status: 'success',
-      data: { suppliers },
-    })
+
+    return success(res, { suppliers }, 'Suppliers fetched successfully')
   } catch (error) {
     console.log(error)
-    res.status(500).json({ status: 'fail', error: 'Failed to fetch suppliers' })
+    return serverError(res, 'Failed to fetch the suppliers')
   }
 }
 

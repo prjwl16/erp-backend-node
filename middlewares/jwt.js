@@ -2,16 +2,14 @@
 
 import { getUserDetails } from '../models/user.js'
 import jwt from 'jsonwebtoken'
+import { invalidRequest } from '../utils/response.js'
 
 export const verifyToken = async (req, res, next) => {
   const bearerHeader = req.headers['authorization']
   if (typeof bearerHeader !== 'undefined') {
     const bearer = bearerHeader.split(' ')
     const token = bearer[1]
-    if (!token)
-      return res.status(403).json({
-        message: 'Token not provided',
-      })
+    if (!token) return invalidRequest(res, 'Invalid token provided', 403)
     try {
       const data = jwt.verify(token, process.env.JWT_SECRET)
       if (typeof data === 'string') throw Error('Invalid token provided')
@@ -20,9 +18,7 @@ export const verifyToken = async (req, res, next) => {
       req.user = user
     } catch (error) {
       console.log('error : ', error.message)
-      return res.status(403).json({
-        message: 'Invalid token provided',
-      })
+      return invalidRequest(res, 'Invalid token provided', 403)
     }
     console.log('token verified : ', {
       user: req.user.email,
@@ -30,8 +26,6 @@ export const verifyToken = async (req, res, next) => {
     })
     next()
   } else {
-    return res.status(403).json({
-      message: 'Unauthorized',
-    })
+    return invalidRequest(res, 'Unauthorized', 403)
   }
 }

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import prisma from '../prisma.js'
+import { invalidRequest, serverError, success } from '../utils/response.js'
 
 const createCategory = async (req, res) => {
   const { name } = req.body
@@ -12,10 +13,7 @@ const createCategory = async (req, res) => {
   })
 
   if (category) {
-    return res.status(400).json({
-      status: 'fail',
-      message: 'Category already exists',
-    })
+    invalidRequest(res, 'Category already exists')
   }
 
   try {
@@ -30,18 +28,10 @@ const createCategory = async (req, res) => {
       },
     })
 
-    res.status(201).json({
-      status: 'success',
-      data: {
-        category: newCategory,
-      },
-    })
+    return success(res, { category: newCategory }, 'Category created successfully')
   } catch (error) {
     console.log(error)
-    res.status(400).json({
-      status: 'fail',
-      message: error.message,
-    })
+    return serverError(res, 'Failed to create the category')
   }
 }
 
@@ -53,18 +43,10 @@ const getCategories = async (req, res) => {
       },
     })
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        categories,
-      },
-    })
+    return success(res, { categories }, 'Categories fetched successfully')
   } catch (error) {
     console.log(error)
-    res.status(400).json({
-      status: 'fail',
-      message: error.message,
-    })
+    return serverError(res, 'Failed to fetch the categories')
   }
 }
 
@@ -80,10 +62,7 @@ const deleteCategory = async (req, res) => {
     })
 
     if (!isExists) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'Category does not exist',
-      })
+      invalidRequest(res, 'Category does not exist')
     }
 
     // check if this category is used by any product
@@ -99,28 +78,12 @@ const deleteCategory = async (req, res) => {
     })
 
     if (products.length > 0) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'Category is in use by a product',
-      })
+      invalidRequest(res, 'Category is used by some products')
     }
-
-    // const category = await prisma.category.delete({
-    //   where: {
-    //     id: id,
-    //   },
-    // })
-
-    res.status(200).json({
-      status: 'success',
-      data: {},
-    })
+    success(res, {}, 'Category deleted successfully')
   } catch (error) {
     console.log(error)
-    res.status(400).json({
-      status: 'fail',
-      message: 'Failed to delete the category',
-    })
+    serverError(res, 'Failed to delete the category')
   }
 }
 

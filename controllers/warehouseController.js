@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import prisma from '../prisma.js'
+import { invalidRequest, serverError, success } from '../utils/response.js'
 
 const createWarehouse = async (req, res) => {
   const { name, location, address, managerId } = req.body
@@ -13,10 +14,7 @@ const createWarehouse = async (req, res) => {
     })
 
     if (isWarehouseExists) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'Warehouse with given name already exists',
-      })
+      return invalidRequest(res, 'Warehouse already exists')
     }
 
     let newWarehouse = {
@@ -42,18 +40,10 @@ const createWarehouse = async (req, res) => {
 
     newWarehouse = await prisma.warehouse.create(newWarehouse)
 
-    res.status(201).json({
-      status: 'success',
-      data: {
-        warehouse: newWarehouse,
-      },
-    })
+    return success(res, { warehouse: newWarehouse }, 'Warehouse created successfully')
   } catch (error) {
     console.log('error : ', error.message)
-    res.status(400).json({
-      status: 'fail',
-      message: error.message,
-    })
+    return serverError(res, 'Failed to create the warehouse')
   }
 }
 
@@ -76,17 +66,10 @@ const getAllWarehouses = async (req, res) => {
       },
     })
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        warehouses,
-      },
-    })
+    return success(res, { warehouses }, 'Warehouses fetched successfully')
   } catch (error) {
-    res.status(400).json({
-      status: 'fail',
-      message: error.message,
-    })
+    console.log(error)
+    return serverError(res, 'Failed to fetch the warehouses')
   }
 }
 
@@ -104,19 +87,10 @@ const getProductsByWarehouseId = async (req, res) => {
         product: true,
       },
     })
-    return res.send({
-      success: true,
-      data: {
-        total: products.length,
-        products,
-      },
-    })
+    return success(res, { products }, 'Products fetched successfully')
   } catch (e) {
     console.error(e)
-    return res.status(500).send({
-      success: false,
-      message: 'We f*ck up..!',
-    })
+    return serverError(res, 'Failed to fetch the products')
   }
 }
 

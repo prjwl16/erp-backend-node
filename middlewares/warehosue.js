@@ -1,4 +1,5 @@
 import prisma from '../prisma.js'
+import { invalidRequest } from '../utils/response.js'
 
 export const isValidWarehouse = async (req, res, next) => {
   try {
@@ -12,10 +13,7 @@ export const isValidWarehouse = async (req, res, next) => {
       })
       if (warehouse) next()
       else {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Invalid warehouse',
-        })
+        return invalidRequest(res, 'Invalid warehouse')
       }
     } else if (data.warehouses) {
       const warehouseIds = data.warehouses.map((warehouse) => warehouse.id)
@@ -30,25 +28,13 @@ export const isValidWarehouse = async (req, res, next) => {
       })
       if (warehouses && warehouseIds.length === warehouses.length) next()
       else {
-        return res.status(400).json({
-          status: 'fail',
-          message: 'Invalid warehouses',
-        })
+        return invalidRequest(res, 'Invalid warehouses')
       }
     } else {
-      return res.status(400).json({
-        status: 'fail',
-        data: {
-          key: 'warehouses',
-        },
-        message: 'Please select valid warehouse',
-      })
+      return invalidRequest(res, 'Please select valid warehouse')
     }
   } catch (e) {
     console.error('Err: ', e.message)
-    return res.send(400).json({
-      success: false,
-      message: 'Failed to validate warehouse data',
-    })
+    return invalidRequest(res, 'Failed to validate warehouse data')
   }
 }

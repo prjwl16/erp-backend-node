@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { isValidCategory } from '../middlewares/category.js'
 import { isValidWarehouse } from '../middlewares/warehosue.js'
 import prisma from '../prisma.js'
+import { invalidRequest, serverError, success } from '../utils/response.js'
 
 const createProduct = async (req, res) => {
   /*
@@ -14,10 +15,7 @@ const createProduct = async (req, res) => {
     const data = JSON.parse(req.body.data)
 
     if (!data) {
-      return res.status(400).json({
-        success: 'FAILED',
-        message: 'Please provide product data',
-      })
+      return invalidRequest(res, 'Please provide product data')
     }
 
     const isProductExistsWithGiveCode = await prisma.product.findFirst({
@@ -28,10 +26,7 @@ const createProduct = async (req, res) => {
     })
 
     if (isProductExistsWithGiveCode) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'Product with given code already exists',
-      })
+      return invalidRequest(res, 'Product with the given code already exists')
     }
 
     const warehouses = data.warehouses.map((warehouse) => ({
@@ -101,101 +96,55 @@ const createProduct = async (req, res) => {
       },
     })
 
-    return res.status(201).json({
-      status: 'SUCCESS',
-      data: {
-        product,
-      },
-    })
+    return success(res, { product }, 'Product created successfully')
   } catch (e) {
     console.log(e)
-    res.status(400).json({
-      status: 'fail',
-      message: e.message,
-    })
+    return serverError(res, 'Failed to create the product')
   }
 }
 
 const getProductById = async (req, res) => {
-  const product = await prisma.product.findUnique({
-    where: { id: req.params.id },
-    include: {
-      category: true,
-      warehouseProduct: {
-        include: {
-          warehouse: true,
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id: req.params.id },
+      include: {
+        category: true,
+        warehouseProduct: {
+          include: {
+            warehouse: true,
+          },
         },
       },
-    },
-  })
-  res.status(200).json(product)
+    })
+    return success(res, { product }, 'Product fetched successfully')
+  } catch (error) {
+    console.log(error)
+    return serverError(res, 'Failed to fetch the product')
+  }
 }
 
 const updateProduct = async (req, res) => {
-  const product = await prisma.product.update({
-    where: { id: req.params.id },
-    data: req.body,
-  })
-  res.status(200).json(product)
+  try {
+    const product = await prisma.product.update({
+      where: { id: req.params.id },
+      data: req.body,
+    })
+    return success(res, { product }, 'Product updated successfully')
+  } catch (error) {
+    console.log(error)
+    return serverError(res, 'Failed to update the product')
+  }
 }
 
 const deleteProduct = async (req, res) => {
-  const product = await prisma.product.delete({
-    where: { id: req.params.id },
-  })
-  res.status(200).json(product)
-}
-
-const createProductWithDetails = async (req, res) => {
-  const { name, description, price, categoryId, warehouseId, stock, createdById } = req.body
-
   try {
-    const newProduct = await prisma.product.create({
-      data: {
-        name,
-        description,
-        price,
-        category: {
-          connect: {
-            id: categoryId,
-          },
-        },
-        warehouseProduct: {
-          create: {
-            warehouse: {
-              connect: {
-                id: warehouseId,
-              },
-            },
-            stock,
-          },
-        },
-        stock,
-        createdBy: {
-          connect: {
-            id: createdById,
-          },
-        },
-        updatedBy: {
-          connect: {
-            id: createdById,
-          },
-        },
-      },
+    const product = await prisma.product.delete({
+      where: { id: req.params.id },
     })
-
-    res.status(201).json({
-      status: 'success',
-      data: {
-        product: newProduct,
-      },
-    })
-  } catch (error) {
-    console.log(error)
-    res.status(400).json({
-      status: 'fail',
-      message: error.message,
-    })
+    return success(res, { product }, 'Product deleted successfully')
+  } catch (e) {
+    console.log(e)
+    return serverError(res, 'Failed to delete the product')
   }
 }
 
@@ -239,20 +188,10 @@ const getProducts = async (req, res) => {
 
     const totalPages = Math.ceil(totalProducts / limit)
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        totalPages,
-        products: allProducts,
-        totalProducts,
-      },
-    })
+    return success(res, { products: allProducts, totalProducts, totalPages }, 'Products fetched successfully')
   } catch (error) {
     console.log(error)
-    res.status(400).json({
-      status: 'fail',
-      message: error.message,
-    })
+    return serverError(res, 'Failed to fetch the products')
   }
 }
 
