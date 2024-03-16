@@ -1,7 +1,8 @@
-const prisma = require('../prisma')
-const { invalidRequest, success, serverError } = require('../utils/response')
+import { Router } from 'express'
+import prisma from '../prisma.js'
+import { invalidRequest, serverError, success } from '../utils/response.js'
 
-exports.createPurchaseOrderTransaction = async (req, res) => {
+const createPurchaseOrderTransaction = async (req, res) => {
   try {
     const { purchaseOrderId, transactionAmount } = req.body
 
@@ -70,3 +71,9 @@ exports.createPurchaseOrderTransaction = async (req, res) => {
     return serverError(res, 'Failed to add the purchase order transaction')
   }
 }
+
+const purchaseOrderTransactionsRouter = Router()
+
+purchaseOrderTransactionsRouter.post('/', createPurchaseOrderTransaction)
+
+export default purchaseOrderTransactionsRouter

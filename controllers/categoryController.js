@@ -1,5 +1,7 @@
-const prisma = require('../prisma')
-exports.createCategory = async (req, res) => {
+import { Router } from 'express'
+import prisma from '../prisma.js'
+
+const createCategory = async (req, res) => {
   const { name } = req.body
   //check if already exists for the client
   const category = await prisma.category.findFirst({
@@ -43,7 +45,7 @@ exports.createCategory = async (req, res) => {
   }
 }
 
-exports.getCategories = async (req, res) => {
+const getCategories = async (req, res) => {
   try {
     const categories = await prisma.category.findMany({
       where: {
@@ -66,7 +68,7 @@ exports.getCategories = async (req, res) => {
   }
 }
 
-exports.deleteCategory = async (req, res) => {
+const deleteCategory = async (req, res) => {
   try {
     const id = parseInt(req.params.id)
 
@@ -121,3 +123,10 @@ exports.deleteCategory = async (req, res) => {
     })
   }
 }
+
+const categoryRouter = Router()
+categoryRouter.post('/', createCategory)
+categoryRouter.get('/', getCategories)
+categoryRouter.delete('/:id', deleteCategory)
+
+export default categoryRouter

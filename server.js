@@ -1,16 +1,17 @@
 import dotenv from 'dotenv'
 import express from 'express'
 import cors from 'cors'
-import router from './routes/index.js'
+import router from './controllers/index.js'
 
 dotenv.config()
+
 const app = express()
 app.use(express.json())
 
 //Routes
 app.use(cors())
 
-app.use('/api', router)
+app.use('/', router)
 
 app.get('/', (req, res) => {
   console.log('GET /', req.query)

@@ -1,5 +1,6 @@
-const prisma = require('../prisma')
-exports.isValidWarehouse = async (req, res, next) => {
+import prisma from '../prisma.js'
+
+export const isValidWarehouse = async (req, res, next) => {
   try {
     const data = JSON.parse(req.body.data)
     if (data.warehouseId) {

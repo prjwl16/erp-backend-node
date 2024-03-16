@@ -1,4 +1,4 @@
-import { checkIfAlreadyRegistered, hashPassword } from '../utils/authUtils.js'
+import { checkIfAlreadyRegistered, comparePassword, hashPassword } from '../utils/authUtils.js'
 import prisma from '../prisma.js'
 import jwt from 'jsonwebtoken'
 import { Router } from 'express'

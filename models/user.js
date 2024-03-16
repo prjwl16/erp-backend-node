@@ -1,11 +1,11 @@
-const prisma = require("../prisma");
+import prisma from '../prisma.js'
 
-exports.getUserDetails = async (userId) => {
+export const getUserDetails = async (userId) => {
   const user = await prisma.user.findUnique({
-    where: {id: userId},
+    where: { id: userId },
     include: {
       client: true,
     },
-  });
-  return user;
+  })
+  return user
 }

@@ -1,22 +1,22 @@
-const prisma = require("../prisma");
+import { Router } from 'express'
+import prisma from '../prisma.js'
 
-exports.createWarehouse = async (req, res) => {
-  const {name, location, address, managerId} = req.body;
+const createWarehouse = async (req, res) => {
+  const { name, location, address, managerId } = req.body
 
   try {
-
     const isWarehouseExists = await prisma.warehouse.findFirst({
       where: {
         name,
         clientId: req.user.clientId,
       },
-    });
+    })
 
     if (isWarehouseExists) {
       return res.status(400).json({
         status: 'fail',
         message: 'Warehouse with given name already exists',
-      });
+      })
     }
 
     let newWarehouse = {
@@ -32,32 +32,32 @@ exports.createWarehouse = async (req, res) => {
       },
     }
 
-    if(managerId){
+    if (managerId) {
       newWarehouse.data.manager = {
         connect: {
-          id: managerId
-        }
+          id: managerId,
+        },
       }
     }
 
-    newWarehouse = await prisma.warehouse.create(newWarehouse);
+    newWarehouse = await prisma.warehouse.create(newWarehouse)
 
     res.status(201).json({
       status: 'success',
       data: {
         warehouse: newWarehouse,
       },
-    });
+    })
   } catch (error) {
     console.log('error : ', error.message)
     res.status(400).json({
       status: 'fail',
       message: error.message,
-    });
+    })
   }
-};
+}
 
-exports.getAllWarehouses = async (req, res) => {
+const getAllWarehouses = async (req, res) => {
   try {
     const warehouses = await prisma.warehouse.findMany({
       where: {
@@ -71,52 +71,59 @@ exports.getAllWarehouses = async (req, res) => {
             lastName: true,
             email: true,
             phone: true,
-          }
-        }
-      }
-    });
+          },
+        },
+      },
+    })
 
     res.status(200).json({
       status: 'success',
       data: {
         warehouses,
       },
-    });
+    })
   } catch (error) {
     res.status(400).json({
       status: 'fail',
       message: error.message,
-    });
+    })
   }
 }
 
-exports.getProductsByWarehouseId = async (req, res) => {
+const getProductsByWarehouseId = async (req, res) => {
   try {
-    const {id} = req.params;
+    const { id } = req.params
     const products = await prisma.warehouse_Product.findMany({
       where: {
         warehouseId: id,
         warehouse: {
-          clientId: req.user.clientId
-        }
+          clientId: req.user.clientId,
+        },
       },
       include: {
-        product: true
-      }
+        product: true,
+      },
     })
     return res.send({
       success: true,
       data: {
         total: products.length,
-        products
-      }
+        products,
+      },
     })
-
   } catch (e) {
-    console.error(e);
+    console.error(e)
     return res.status(500).send({
       success: false,
-      message: 'We f*ck up..!'
+      message: 'We f*ck up..!',
     })
   }
 }
+
+const warehouseRouter = Router()
+
+warehouseRouter.get('/:id', getProductsByWarehouseId)
+warehouseRouter.post('/', createWarehouse)
+warehouseRouter.get('/', getAllWarehouses)
+
+export default warehouseRouter

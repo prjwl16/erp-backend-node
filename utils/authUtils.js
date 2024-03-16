@@ -1,5 +1,5 @@
 import prisma from '../prisma.js'
-import { hash } from 'bcrypt'
+import { compare, hash } from 'bcrypt'
 
 export const checkIfAlreadyRegistered = async ({ email, phone }) => {
   let isClientExists = await prisma.client.findFirst({
@@ -39,5 +39,5 @@ export const hashPassword = async (password) => {
 }
 
 export const comparePassword = async (password, hashedPassword) => {
-  return await bcrypt.compare(password, hashedPassword)
+  return await compare(password, hashedPassword)
 }

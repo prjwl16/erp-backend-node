@@ -1,9 +1,10 @@
-const prisma = require('../prisma')
-const { success, serverError, invalidRequest } = require('../utils/response')
+import { isValidCreatPurchaseOrderRequest } from '../middlewares/purchase-order.js'
+import { Router } from 'express'
+import prisma from '../prisma.js'
 
 const limit = 10
 
-exports.createPurchaseOrder = async (req, res) => {
+const createPurchaseOrder = async (req, res) => {
   let {
     name,
     description,
@@ -35,50 +36,50 @@ exports.createPurchaseOrder = async (req, res) => {
     }
 
     const newPurchaseOrder = await prisma.purchaseOrder.create({
-        data: {
-          name,
-          description,
-          supplier: {
-            connect: {
-              id: supplierId,
-            },
+      data: {
+        name,
+        description,
+        supplier: {
+          connect: {
+            id: supplierId,
           },
-          quantity,
-          notes,
-          baseAmount,
-          taxAmount,
-          totalAmount,
-          otherCharges,
-          paymentStatus,
+        },
+        quantity,
+        notes,
+        baseAmount,
+        taxAmount,
+        totalAmount,
+        otherCharges,
+        paymentStatus,
 
-          PurchaseOrderStatusLog: {
-            create: {
-              remarks: 'Purchase order created',
-              status: 'PLACED',
-              updatedBy: {
-                connect: {
-                  id: createdBy,
-                },
+        PurchaseOrderStatusLog: {
+          create: {
+            remarks: 'Purchase order created',
+            status: 'PLACED',
+            updatedBy: {
+              connect: {
+                id: createdBy,
               },
             },
           },
+        },
 
-          // these could be calculated from the transaction table but for now we are keeping it simple
-          totalAmountDue, // Amount which client is yet to pay to the supplier
-          totalAmountPaid, // Amount which client has already paid to the supplier
-          advancePaid, // Amount which client has already paid to the supplier as advance (not related to the purchase order transaction)
-          client: {
-            connect: {
-              id: req.user.clientId,
-            },
+        // these could be calculated from the transaction table but for now we are keeping it simple
+        totalAmountDue, // Amount which client is yet to pay to the supplier
+        totalAmountPaid, // Amount which client has already paid to the supplier
+        advancePaid, // Amount which client has already paid to the supplier as advance (not related to the purchase order transaction)
+        client: {
+          connect: {
+            id: req.user.clientId,
           },
-          createdBy: {
-            connect: {
-              id: createdBy,
-            },
+        },
+        createdBy: {
+          connect: {
+            id: createdBy,
           },
-        }}
-    )
+        },
+      },
+    })
     success(res, { newPurchaseOrder }, 'Purchase order added successfully')
   } catch (error) {
     console.log(error)
@@ -86,7 +87,7 @@ exports.createPurchaseOrder = async (req, res) => {
   }
 }
 
-exports.getPurchaseOrderById = async (req, res) => {
+const getPurchaseOrderById = async (req, res) => {
   try {
     const id = parseInt(req.params.id)
     const purchaseOrder = await prisma.purchaseOrder.findUnique({
@@ -97,13 +98,13 @@ exports.getPurchaseOrderById = async (req, res) => {
         PurchaseOrderTransaction: {
           orderBy: {
             createdAt: 'desc',
-          }
+          },
         },
         supplier: true,
         PurchaseOrderStatusLog: {
           orderBy: {
             createdAt: 'desc',
-          }
+          },
         },
       },
     })
@@ -114,7 +115,7 @@ exports.getPurchaseOrderById = async (req, res) => {
   }
 }
 
-exports.getAllPurchaseOrders = async (req, res) => {
+const getAllPurchaseOrders = async (req, res) => {
   try {
     const { page, orderStatus, paymentStatus } = req.query
     const purchaseOrders = await prisma.purchaseOrder.findMany({
@@ -147,7 +148,7 @@ exports.getAllPurchaseOrders = async (req, res) => {
   }
 }
 
-exports.updatePurchaseOrderStatus = async (req, res) => {
+const updatePurchaseOrderStatus = async (req, res) => {
   try {
     const id = parseInt(req.params.id)
     const { orderStatus } = req.body
@@ -155,7 +156,6 @@ exports.updatePurchaseOrderStatus = async (req, res) => {
     if (!orderStatus) {
       return invalidRequest(res, 'Order status is required')
     }
-
 
     const [updatedPurchaseOrder, newLog] = await prisma.$transaction([
       prisma.purchaseOrder.update({
@@ -185,10 +185,17 @@ exports.updatePurchaseOrderStatus = async (req, res) => {
     ])
 
     success(res, { updatedPurchaseOrder, newLog }, 'Purchase order status updated successfully')
-
   } catch (error) {
     console.log(error)
     serverError(res, 'Failed to update the purchase order status')
   }
 }
 
+const purchaseOrderRouter = Router()
+
+purchaseOrderRouter.get('/pages', getAllPurchaseOrders)
+purchaseOrderRouter.post('/', isValidCreatPurchaseOrderRequest, createPurchaseOrder)
+purchaseOrderRouter.get('/:id', getPurchaseOrderById)
+purchaseOrderRouter.put('/status/:id', updatePurchaseOrderStatus)
+
+export default purchaseOrderRouter
