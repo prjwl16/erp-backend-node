@@ -3,7 +3,7 @@ import { Router } from 'express'
 import { invalidRequest, serverError, success } from '../utils/response.js'
 
 const createSupplier = async (req, res) => {
-  const { name, email, phone, address } = req.body
+  const { firstName, lastName, email, phone, address, gstin } = req.body
   const { id: createdBy } = req.user
 
   // check if the supplier already exists with give email or phone for the same client
@@ -27,7 +27,9 @@ const createSupplier = async (req, res) => {
 
     const newSupplier = await prisma.supplier.create({
       data: {
-        name,
+        firstName,
+        lastName,
+        gstin,
         email,
         phone,
         address,

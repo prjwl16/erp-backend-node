@@ -3,6 +3,7 @@ import { isValidCategory } from '../middlewares/category.js'
 import { isValidWarehouse } from '../middlewares/warehosue.js'
 import prisma from '../prisma.js'
 import { invalidRequest, serverError, success } from '../utils/response.js'
+import multer from 'multer'
 
 const createProduct = async (req, res) => {
   /*
@@ -34,14 +35,14 @@ const createProduct = async (req, res) => {
       stock: warehouse.stock,
     }))
 
-    const images = req.files.map((file) => ({
+    const images = req.files?.map((file) => ({
       filename: file.originalname,
       size: file.size,
       mimetype: file.mimetype,
       path: file.location,
     }))
 
-    const paths = images.map((file) => file.path)
+    const paths = images?.map((file) => file.path)
 
     // const categories = data.category.map((category) => ({
     //   id: category.id,
@@ -206,9 +207,11 @@ const getProducts = async (req, res) => {
 //   }),
 // })
 
+const upload = multer()
+
 const productRouter = Router()
 
-productRouter.post('/', isValidCategory, isValidWarehouse, createProduct)
+productRouter.post('/', upload.none(), isValidCategory, isValidWarehouse, createProduct)
 productRouter.get('/pages', getProducts)
 productRouter.get('/:id', getProductById)
 productRouter.put('/:id', updateProduct)

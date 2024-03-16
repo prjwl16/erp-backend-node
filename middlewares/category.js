@@ -3,8 +3,8 @@ import { invalidRequest } from '../utils/response.js'
 
 export const isValidCategory = async (req, res, next) => {
   try {
+    console.log('Data: ', req.body.data)
     const data = JSON.parse(req.body.data)
-    console.log('Data: ', data)
     console.log('Req: ', req.user.clientId)
 
     if (data.categoryId) {

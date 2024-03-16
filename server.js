@@ -11,7 +11,7 @@ app.use(express.json())
 //Routes
 app.use(cors())
 
-app.use('/', router)
+app.use('/api', router)
 
 app.get('/', (req, res) => {
   console.log('GET /', req.query)

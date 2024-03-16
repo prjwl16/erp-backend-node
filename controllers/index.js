@@ -25,6 +25,6 @@ protectedRouter.use('/utils', utilsController)
 protectedRouter.use('/warehouse', warehouseRouter)
 protectedRouter.use('/purchase-order-transaction', purchaseOrderTransactionsRouter)
 
-router.use('/api', verifyToken, protectedRouter)
+router.use(verifyToken, protectedRouter)
 
 export default router

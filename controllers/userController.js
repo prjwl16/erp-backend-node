@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { serverError, success } from '../utils/response.js'
+import prisma from '../prisma.js'
 
 const getUser = async (req, res) => {
   const user = await prisma.user.findUnique({
