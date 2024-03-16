@@ -77,10 +77,16 @@ const deleteCategory = async (req, res) => {
       },
     })
 
+    const category = await prisma.category.delete({
+      where: {
+        id: id,
+      },
+    })
+
     if (products.length > 0) {
       invalidRequest(res, 'Category is used by some products')
     }
-    success(res, {}, 'Category deleted successfully')
+    success(res, { category }, 'Category deleted successfully')
   } catch (error) {
     console.log(error)
     serverError(res, 'Failed to delete the category')

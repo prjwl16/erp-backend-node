@@ -51,7 +51,7 @@ model User {
   updatedAt              DateTime                 @updatedAt @db.Timestamp()
   client                 Client?                  @relation(fields: [clientId], references: [id])
   clientId               Int?
-  Warehouse              Warehouse[]
+  Warehouse              Warehouse[] // manager
   Supplier               Supplier[]
   PurchaseOrder          PurchaseOrder[]
   PurchaseOrderStatusLog PurchaseOrderStatusLog[]
@@ -164,11 +164,13 @@ model Warehouse_Product {
 // Money money
 
 model Supplier {
-  id      Int    @id @default(autoincrement())
-  name    String
-  email   String
-  phone   String
-  address String
+  id        Int     @id @default(autoincrement())
+  firstName String?
+  lastName  String?
+  email     String
+  phone     String
+  address   String
+  gstin     String?
 
   createdAt     DateTime        @default(now()) @db.Timestamp()
   updatedAt     DateTime        @updatedAt @db.Timestamp()
@@ -204,6 +206,7 @@ model PurchaseOrder {
   totalAmountDue  Float @default(0)
 
   // dates
+  deliveryDate  DateTime?
   orderStatus   PURCHASE_ORDER_STATUS         @default(DRAFT)
   paymentStatus PURCHASE_ORDER_PAYMENT_STATUS @default(UNPAID)
 
@@ -226,6 +229,7 @@ model PurchaseOrderStatusLog {
   status          PURCHASE_ORDER_STATUS
   remarks         String?
   note            String?
+  logs            String?
 
   updatedBy   User?    @relation(fields: [updatedById], references: [id])
   updatedById Int?
