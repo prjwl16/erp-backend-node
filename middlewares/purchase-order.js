@@ -1,5 +1,6 @@
-const { serverError, invalidRequest } = require('../utils/response')
-exports.isValidCreatPurchaseOrderRequest = (req, res, next) => {
+import { invalidRequest, serverError } from '../utils/response.js'
+
+export const isValidCreatPurchaseOrderRequest = (req, res, next) => {
   try {
     let { totalAmount, baseAmount, taxAmount, otherCharges, advancePaid } = req.body
     advancePaid = advancePaid || 0

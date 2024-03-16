@@ -1,38 +1,34 @@
-const prisma = require("../prisma");
-const {checkIfAlreadyRegistered, hashPassword, comparePassword} = require("../utils/authUtils");
-const jwt = require("jsonwebtoken");
+import { checkIfAlreadyRegistered, comparePassword, hashPassword } from '../utils/authUtils.js'
+import prisma from '../prisma.js'
+import jwt from 'jsonwebtoken'
+import { Router } from 'express'
 
-exports.check = async (req, res) => {
-
-  const isExists = await checkIfAlreadyRegistered(req.body);
+const check = async (req, res) => {
+  const isExists = await checkIfAlreadyRegistered(req.body)
 
   if (isExists) {
     return res.status(400).json({
-      message: "Client already exists with this email",
-    });
+      message: 'Client already exists with this email',
+    })
   }
 
   res.status(200).json({
-    message: "Client does not exists with this email",
-  });
-
-
+    message: 'Client does not exists with this email',
+  })
 }
 
-exports.register = async (req, res) => {
+const register = async (req, res) => {
+  const { firstName, lastName, businessName, email, password, phone, address } = req.body
 
-  const {firstName, lastName, businessName, email, password, phone, address} = req.body;
-
-  const {isExists, message} = await checkIfAlreadyRegistered({email, phone});
+  const { isExists, message } = await checkIfAlreadyRegistered({ email, phone })
 
   if (isExists) {
     return res.status(400).json({
       message: message,
-    });
+    })
   }
 
-  const hashedPassword = await hashPassword(password);
-
+  const hashedPassword = await hashPassword(password)
 
   const userClient = await prisma.user.create({
     data: {
@@ -40,45 +36,47 @@ exports.register = async (req, res) => {
       lastName: lastName,
       email,
       password: hashedPassword,
-      role: "ADMIN",
+      role: 'ADMIN',
       phone,
       client: {
         create: {
-          name: businessName, email, phone, address,
+          name: businessName,
+          email,
+          phone,
+          address,
         },
       },
     },
-  });
+  })
 
   if (!userClient) {
     return res.status(400).json({
-      message: "Client not registered",
-    });
+      message: 'Client not registered',
+    })
   }
 
-  userClient.password = undefined;
+  userClient.password = undefined
 
   const user = await prisma.user.findUnique({
-    where: {id: userClient.id},
+    where: { id: userClient.id },
     include: {
       client: true,
-    }
-  });
+    },
+  })
 
-  user.password = undefined;
+  user.password = undefined
 
   return res.status(201).json({
-    message: "Client registered successfully",
+    message: 'Client registered successfully',
     data: user,
-  });
-
+  })
 }
 
-exports.login = async (req, res) => {
-  const {email, password} = req.body;
+const login = async (req, res) => {
+  const { email, password } = req.body
   const user = await prisma.user.findUnique({
-    where: {email},
-    select:{
+    where: { email },
+    select: {
       id: true,
       email: true,
       password: true,
@@ -88,34 +86,47 @@ exports.login = async (req, res) => {
       avatar: true,
       clientId: true,
       client: {
-        select:{
+        select: {
           name: true,
-        }
-      }
+        },
+      },
     },
-  });
+  })
 
   if (!user || !(await comparePassword(password, user.password))) {
     return res.status(401).json({
-      message: "Invalid credentials",
-    });
+      message: 'Invalid credentials',
+    })
   }
 
-  user.password = undefined;
+  user.password = undefined
 
   // Generate token
-  const token = jwt.sign({
-    id: user.id,
-    role: user.role,
-    email: user.email,
-    clientId: user.clientId,
-  }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN,
-  });
+  const token = jwt.sign(
+    {
+      id: user.id,
+      role: user.role,
+      email: user.email,
+      clientId: user.clientId,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    }
+  )
 
   return res.status(200).json({
-    message: "Login successful",
+    message: 'Login successful',
     token,
     data: user,
-  });
+  })
 }
+
+// ROUTES
+const authRouter = Router()
+
+authRouter.post('/register/client', register)
+authRouter.post('/check', check)
+authRouter.post('/login', login)
+
+export default authRouter

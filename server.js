@@ -1,26 +1,24 @@
-//dotenv
-require('dotenv').config();
+import dotenv from 'dotenv'
+import express from 'express'
+import cors from 'cors'
+import router from './controllers/index.js'
 
-//express
-const express = require('express');
-const cors = require("cors");
-const app = express();
-app.use(express.json());
+dotenv.config()
+
+const app = express()
+app.use(express.json())
 
 //Routes
+app.use(cors())
 
-app.use(cors());
+app.use('/', router)
 
 app.get('/', (req, res) => {
-    console.log('GET /', req.query);
-    res.send('Hello World!')
+  console.log('GET /', req.query)
+  res.send('Hello World!')
 })
 
-app.use("/", require("./routes/index"));
-
-
-
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+  console.log(`Server is running on port ${port}`)
+})

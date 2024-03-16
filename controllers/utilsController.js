@@ -1,6 +1,7 @@
-const prisma = require('../prisma')
+import { Router } from 'express'
+import prisma from '../prisma.js'
 
-exports.createTag = async (req, res) => {
+const createTag = async (req, res) => {
   try {
     const { name } = req.body
     const tag = await prisma.product.update({
@@ -20,7 +21,7 @@ exports.createTag = async (req, res) => {
   }
 }
 
-exports.getAllTags = async (req, res) => {
+const getAllTags = async (req, res) => {
   try {
     const tags = await prisma.product.findMany()
     res.status(200).json(tags)
@@ -30,7 +31,7 @@ exports.getAllTags = async (req, res) => {
   }
 }
 
-exports.createProductType = async (req, res) => {
+const createProductType = async (req, res) => {
   try {
     const { name } = req.body
     const productType = await prisma.productType.create({
@@ -45,3 +46,8 @@ exports.createProductType = async (req, res) => {
     res.status(500).json({ message: "Opps..! It's not you, it's us. Please try again later." })
   }
 }
+
+const utilsController = Router()
+utilsController.post('/create-productType', createProductType)
+
+export default utilsController

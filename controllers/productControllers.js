@@ -1,6 +1,9 @@
-const prisma = require('../prisma')
+import { Router } from 'express'
+import { isValidCategory } from '../middlewares/category.js'
+import { isValidWarehouse } from '../middlewares/warehosue.js'
+import prisma from '../prisma.js'
 
-exports.createProduct = async (req, res) => {
+const createProduct = async (req, res) => {
   /*
    * if request fails at any point, let say while checking category or warehouse
    * then will send the image path back to FE and then when hitting next request
@@ -113,7 +116,7 @@ exports.createProduct = async (req, res) => {
   }
 }
 
-exports.getProductById = async (req, res) => {
+const getProductById = async (req, res) => {
   const product = await prisma.product.findUnique({
     where: { id: req.params.id },
     include: {
@@ -128,7 +131,7 @@ exports.getProductById = async (req, res) => {
   res.status(200).json(product)
 }
 
-exports.updateProduct = async (req, res) => {
+const updateProduct = async (req, res) => {
   const product = await prisma.product.update({
     where: { id: req.params.id },
     data: req.body,
@@ -136,14 +139,14 @@ exports.updateProduct = async (req, res) => {
   res.status(200).json(product)
 }
 
-exports.deleteProduct = async (req, res) => {
+const deleteProduct = async (req, res) => {
   const product = await prisma.product.delete({
     where: { id: req.params.id },
   })
   res.status(200).json(product)
 }
 
-exports.createProductWithDetails = async (req, res) => {
+const createProductWithDetails = async (req, res) => {
   const { name, description, price, categoryId, warehouseId, stock, createdById } = req.body
 
   try {
@@ -197,7 +200,7 @@ exports.createProductWithDetails = async (req, res) => {
 }
 
 const limit = 10
-exports.getProducts = async (req, res) => {
+const getProducts = async (req, res) => {
   try {
     const { page } = req.query
 
@@ -252,3 +255,24 @@ exports.getProducts = async (req, res) => {
     })
   }
 }
+
+// const upload = multer({
+//   storage: multerS3({
+//     s3: s3,
+//     bucket: process.env.S3_BUCKET,
+//     contentType: multerS3.AUTO_CONTENT_TYPE,
+//     key: function (req, file, cb) {
+//       cb(null, Date.now().toString()) // Generate unique key for the file
+//     },
+//   }),
+// })
+
+const productRouter = Router()
+
+productRouter.post('/', isValidCategory, isValidWarehouse, createProduct)
+productRouter.get('/pages', getProducts)
+productRouter.get('/:id', getProductById)
+productRouter.put('/:id', updateProduct)
+productRouter.delete('/:id', deleteProduct)
+
+export default productRouter

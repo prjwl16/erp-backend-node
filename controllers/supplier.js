@@ -1,5 +1,7 @@
-const prisma = require('../prisma')
-exports.createSupplier = async (req, res) => {
+import prisma from '../prisma.js'
+import { Router } from 'express'
+
+const createSupplier = async (req, res) => {
   const { name, email, phone, address } = req.body
   const { id: createdBy } = req.user
 
@@ -50,7 +52,7 @@ exports.createSupplier = async (req, res) => {
   }
 }
 
-exports.getSuppliers = async (req, res) => {
+const getSuppliers = async (req, res) => {
   try {
     const suppliers = await prisma.supplier.findMany({
       where: {
@@ -66,3 +68,10 @@ exports.getSuppliers = async (req, res) => {
     res.status(500).json({ status: 'fail', error: 'Failed to fetch suppliers' })
   }
 }
+
+const supplierRouter = Router()
+
+supplierRouter.post('/', createSupplier)
+supplierRouter.get('/', getSuppliers)
+
+export default supplierRouter
