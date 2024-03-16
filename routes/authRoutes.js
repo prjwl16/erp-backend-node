@@ -1,14 +1,11 @@
-const express = require('express');
-const router = express.Router();
+const { Router } = require('express')
+const router = Router()
 
-const authController = require('../controllers/authController');
+const authController = require('../controllers/authController')
 
-
-router.post('/register/client', authController.register);
+router.post('/register/client', authController.register)
 //route to check if email is already registered
-router.post('/check', authController.check);
-router.post('/login', authController.login);
+router.post('/check', authController.check)
+router.post('/login', authController.login)
 
-
-
-module.exports = router;
+module.exports = router
