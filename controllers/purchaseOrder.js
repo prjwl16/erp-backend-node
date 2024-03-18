@@ -11,17 +11,19 @@ const createPurchaseOrder = async (req, res) => {
     description,
     notes,
     supplierId,
-    totalAmount,
     baseAmount,
-    taxAmount,
     otherCharges,
+    totalAmount,
+    taxSlab,
+    cgst,
+    sgst,
+    igst,
     advancePaid,
     quantity,
   } = req.body
   try {
     const { id: createdBy } = req.user
 
-    advancePaid = advancePaid || 0
     const totalAmountDue = totalAmount - advancePaid
     const totalAmountPaid = advancePaid
     const paymentStatus = advancePaid === totalAmount ? 'PAID' : advancePaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID'
@@ -48,7 +50,10 @@ const createPurchaseOrder = async (req, res) => {
         quantity,
         notes,
         baseAmount,
-        taxAmount,
+        cgst,
+        sgst,
+        igst,
+        taxSlab,
         totalAmount,
         otherCharges,
         paymentStatus,

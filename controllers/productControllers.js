@@ -48,29 +48,47 @@ const createProduct = async (req, res) => {
     //   id: category.id,
     // }))
 
+    const {
+      productName,
+      productDescription,
+      productCode,
+      productSku,
+      baseAmount,
+      otherCharges,
+      totalAmount,
+      taxSlab,
+      cgst,
+      sgst,
+      igst,
+      productTypeId,
+      categoryId,
+      tags,
+    } = data
+
     const product = await prisma.product.create({
       data: {
-        name: data.productName,
-        description: data.productDescription,
-        code: data.productCode,
-        sku: data.productSku,
-        baseAmount: parseFloat(data.baseAmount) || 0,
-        taxSlab: parseFloat(data.taxSlab) || 0,
-        taxAmount: parseFloat(data.taxAmount) || 0,
-        totalAmount: parseFloat(data.sellingAmount) || 0,
-        otherCharges: parseFloat(data.otherCharges || '0') || 0,
+        name: productName,
+        description: productDescription,
+        code: productCode,
+        sku: productSku,
+        baseAmount: parseFloat(baseAmount),
+        otherCharges: parseFloat(otherCharges || '0'),
+        totalAmount: parseFloat(totalAmount),
+        taxSlab: parseFloat(taxSlab),
+        cgst: parseFloat(cgst),
+        sgst: parseFloat(sgst),
+        igst: parseFloat(igst),
         images: paths,
         ProductType: {
           connect: {
-            id: data.productTypeId || 1, // TODO: remove hardcode
+            id: productTypeId,
           },
         },
-
-        tags: data.tags || [],
+        tags: tags,
         //connect to many category
         category: {
           connect: {
-            id: data.categoryId,
+            id: categoryId,
           },
         },
         client: {
@@ -83,7 +101,6 @@ const createProduct = async (req, res) => {
             data: warehouses,
           },
         },
-
         createdBy: {
           connect: {
             id: req.user.id,

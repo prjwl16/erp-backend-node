@@ -71,13 +71,15 @@ model Product {
 
   // pricing
   baseAmount   Float
-  taxSlab      Float
-  taxAmount    Float
+  otherCharges Float @default(0) // tax free amount
   totalAmount  Float
-  otherCharges Float // tax free
+  taxSlab      Float
+  cgst         Float @default(0)
+  sgst         Float @default(0)
+  igst         Float @default(0)
+  discount     Float @default(0)
 
   images String[]
-  tags   String[]
 
   category         Category[]
   client           Client              @relation(fields: [clientId], references: [id])
@@ -94,6 +96,8 @@ model Product {
   productTypeId   Int
   PurchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
   purchaseOrderId Int?
+  tags            ProductTags?   @relation(fields: [productTagsId], references: [id])
+  productTagsId   Int?
 }
 
 model ProductType {
@@ -161,6 +165,15 @@ model Warehouse_Product {
   updatedAt DateTime @updatedAt @db.Timestamp()
 }
 
+model ProductTags {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  createdAt DateTime  @default(now()) @db.Timestamp()
+  updatedAt DateTime  @updatedAt @db.Timestamp()
+  products  Product[]
+}
+
 // Money money
 
 model Supplier {
@@ -194,11 +207,15 @@ model PurchaseOrder {
   supplierId Int
   quantity   Int
 
-  // Amounts
-  baseAmount   Float @default(0)
-  taxAmount    Float @default(0)
+  // pricing
+  baseAmount   Float
+  otherCharges Float @default(0) // tax free amount
   totalAmount  Float @default(0)
-  otherCharges Float @default(0)
+  taxSlab      Float @default(0)
+  cgst         Float @default(0)
+  sgst         Float @default(0)
+  igst         Float @default(0)
+  discount     Float @default(0)
 
   // virtual fields
   totalAmountPaid Float @default(0)
