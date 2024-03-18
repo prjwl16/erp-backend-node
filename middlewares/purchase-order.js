@@ -2,18 +2,18 @@ import { invalidRequest, serverError } from '../utils/response.js'
 
 export const isValidCreatPurchaseOrderRequest = (req, res, next) => {
   try {
-    let { totalAmount, baseAmount, taxAmount, otherCharges, advancePaid } = req.body
-    advancePaid = advancePaid || 0
+    const { totalAmount, baseAmount, otherCharges, advancePaid, cgst, sgst, igst } = req.body
 
     // check if the total amount is greater than other components
     if (totalAmount <= 0) {
       return invalidRequest(res, 'Total amount cannot be negative or zero')
     }
-    if (totalAmount < advancePaid) {
-      return invalidRequest(res, 'Total amount cannot be less than advance paid')
+
+    if (advancePaid > totalAmount) {
+      return invalidRequest(res, 'Advance paid cannot be greater than total amount')
     }
-    if (totalAmount !== baseAmount + taxAmount + otherCharges) {
-      return invalidRequest(res, 'Total amount should be equal to base amount + tax amount + other charges')
+    if (totalAmount !== baseAmount + otherCharges + cgst + sgst + igst) {
+      return invalidRequest(res, 'Total amount should be equal to base amount + tax amounts + other charges')
     }
     next()
   } catch (error) {

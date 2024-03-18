@@ -8,6 +8,9 @@ CREATE TYPE "PURCHASE_ORDER_STATUS" AS ENUM ('DRAFT', 'PLACED', 'IN_TRANSIT', 'D
 CREATE TYPE "PURCHASE_ORDER_PAYMENT_STATUS" AS ENUM ('PAID', 'PARTIALLY_PAID', 'UNPAID');
 
 -- CreateEnum
+CREATE TYPE "TRANSACTION_TYPE" AS ENUM ('ADVANCE', 'NORMAL');
+
+-- CreateEnum
 CREATE TYPE "TRANSACTION_MODE" AS ENUM ('CASH', 'CARD', 'UPI', 'NET_BANKING', 'CHEQUE', 'OTHER');
 
 -- CreateTable
@@ -48,12 +51,14 @@ CREATE TABLE "Product" (
     "code" TEXT NOT NULL,
     "sku" TEXT,
     "baseAmount" DOUBLE PRECISION NOT NULL,
-    "taxSlab" DOUBLE PRECISION NOT NULL,
-    "taxAmount" DOUBLE PRECISION NOT NULL,
+    "otherCharges" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalAmount" DOUBLE PRECISION NOT NULL,
-    "otherCharges" DOUBLE PRECISION NOT NULL,
+    "taxSlab" DOUBLE PRECISION NOT NULL,
+    "cgst" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "sgst" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "igst" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "discount" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "images" TEXT[],
-    "tags" TEXT[],
     "clientId" INTEGER NOT NULL,
     "updatedById" INTEGER NOT NULL,
     "createdById" INTEGER NOT NULL,
@@ -61,6 +66,7 @@ CREATE TABLE "Product" (
     "updatedAt" TIMESTAMP NOT NULL,
     "productTypeId" INTEGER NOT NULL,
     "purchaseOrderId" INTEGER,
+    "productTagsId" INTEGER,
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
 );
@@ -88,14 +94,14 @@ CREATE TABLE "Category" (
 );
 
 -- CreateTable
-CREATE TABLE "subCategory" (
+CREATE TABLE "SubCategory" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP NOT NULL,
     "categoryId" INTEGER NOT NULL,
 
-    CONSTRAINT "subCategory_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "SubCategory_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -125,6 +131,16 @@ CREATE TABLE "Warehouse_Product" (
 );
 
 -- CreateTable
+CREATE TABLE "ProductTags" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL,
+
+    CONSTRAINT "ProductTags_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Supplier" (
     "id" SERIAL NOT NULL,
     "firstName" TEXT,
@@ -149,14 +165,10 @@ CREATE TABLE "PurchaseOrder" (
     "notes" TEXT,
     "supplierId" INTEGER NOT NULL,
     "quantity" INTEGER NOT NULL,
-    "baseAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "taxAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "totalAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "otherCharges" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalAmountPaid" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "advancePaid" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalAmountDue" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "deliveryDate" TIMESTAMP(3),
+    "orderDate" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "orderStatus" "PURCHASE_ORDER_STATUS" NOT NULL DEFAULT 'DRAFT',
     "paymentStatus" "PURCHASE_ORDER_PAYMENT_STATUS" NOT NULL DEFAULT 'UNPAID',
     "createdById" INTEGER,
@@ -165,6 +177,29 @@ CREATE TABLE "PurchaseOrder" (
     "clientId" INTEGER NOT NULL,
 
     CONSTRAINT "PurchaseOrder_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PurchaseOrderInvoice" (
+    "id" SERIAL NOT NULL,
+    "invoiceNumber" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "remarks" TEXT,
+    "invoiceDate" TIMESTAMP(3) NOT NULL,
+    "invoiceDueDate" TIMESTAMP(3),
+    "baseAmount" DOUBLE PRECISION NOT NULL,
+    "otherCharges" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "totalAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "taxSlab" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "cgst" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "sgst" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "igst" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "discount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "purchaseOrderId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL,
+
+    CONSTRAINT "PurchaseOrderInvoice_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -183,18 +218,19 @@ CREATE TABLE "PurchaseOrderStatusLog" (
 );
 
 -- CreateTable
-CREATE TABLE "PurchaseOrderTransaction" (
+CREATE TABLE "PurchaseOrderInvoiceTransaction" (
     "id" SERIAL NOT NULL,
-    "purchaseOrderId" INTEGER NOT NULL,
     "amount" DOUBLE PRECISION NOT NULL,
     "remarks" TEXT,
+    "type" "TRANSACTION_TYPE" NOT NULL DEFAULT 'NORMAL',
     "transactionDate" TIMESTAMP(3) NOT NULL,
     "externalReferenceNumber" TEXT,
     "transactionMode" "TRANSACTION_MODE" NOT NULL DEFAULT 'CASH',
     "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP NOT NULL,
+    "purchaseOrderInvoiceId" INTEGER,
 
-    CONSTRAINT "PurchaseOrderTransaction_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "PurchaseOrderInvoiceTransaction_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -237,13 +273,16 @@ ALTER TABLE "Product" ADD CONSTRAINT "Product_productTypeId_fkey" FOREIGN KEY ("
 ALTER TABLE "Product" ADD CONSTRAINT "Product_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "PurchaseOrder"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Product" ADD CONSTRAINT "Product_productTagsId_fkey" FOREIGN KEY ("productTagsId") REFERENCES "ProductTags"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ProductType" ADD CONSTRAINT "ProductType_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Category" ADD CONSTRAINT "Category_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "subCategory" ADD CONSTRAINT "subCategory_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "SubCategory" ADD CONSTRAINT "SubCategory_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Warehouse" ADD CONSTRAINT "Warehouse_managerId_fkey" FOREIGN KEY ("managerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -273,13 +312,16 @@ ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_createdById_fkey" FORE
 ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "PurchaseOrderInvoice" ADD CONSTRAINT "PurchaseOrderInvoice_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "PurchaseOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "PurchaseOrderStatusLog" ADD CONSTRAINT "PurchaseOrderStatusLog_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "PurchaseOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PurchaseOrderStatusLog" ADD CONSTRAINT "PurchaseOrderStatusLog_updatedById_fkey" FOREIGN KEY ("updatedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PurchaseOrderTransaction" ADD CONSTRAINT "PurchaseOrderTransaction_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "PurchaseOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PurchaseOrderInvoiceTransaction" ADD CONSTRAINT "PurchaseOrderInvoiceTransaction_purchaseOrderInvoiceId_fkey" FOREIGN KEY ("purchaseOrderInvoiceId") REFERENCES "PurchaseOrderInvoice"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_CategoryToProduct" ADD CONSTRAINT "_CategoryToProduct_A_fkey" FOREIGN KEY ("A") REFERENCES "Category"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -20,6 +20,9 @@ const createPurchaseOrder = async (req, res) => {
     igst,
     advancePaid,
     quantity,
+    date,
+    transactionMode,
+    externalReferenceNumber,
   } = req.body
   try {
     const { id: createdBy } = req.user
@@ -38,54 +41,66 @@ const createPurchaseOrder = async (req, res) => {
       return invalidRequest(res, 'Supplier not found')
     }
 
-    const newPurchaseOrder = await prisma.purchaseOrder.create({
-      data: {
-        name,
-        description,
-        supplier: {
-          connect: {
-            id: supplierId,
-          },
+    const newPurchaseOrder = {
+      name,
+      description,
+      supplier: {
+        connect: {
+          id: supplierId,
         },
-        quantity,
-        notes,
-        baseAmount,
-        cgst,
-        sgst,
-        igst,
-        taxSlab,
-        totalAmount,
-        otherCharges,
-        paymentStatus,
-
-        PurchaseOrderStatusLog: {
-          create: {
-            remarks: 'Purchase order created',
-            status: 'PLACED',
-            updatedBy: {
-              connect: {
-                id: createdBy,
-              },
+      },
+      quantity,
+      notes,
+      baseAmount,
+      cgst,
+      sgst,
+      igst,
+      taxSlab,
+      totalAmount,
+      otherCharges,
+      paymentStatus,
+      orderDate: date,
+      PurchaseOrderStatusLog: {
+        create: {
+          remarks: 'Purchase order created',
+          status: 'PLACED',
+          updatedBy: {
+            connect: {
+              id: createdBy,
             },
           },
         },
+      },
 
-        // these could be calculated from the transaction table but for now we are keeping it simple
-        totalAmountDue, // Amount which client is yet to pay to the supplier
-        totalAmountPaid, // Amount which client has already paid to the supplier
-        advancePaid, // Amount which client has already paid to the supplier as advance (not related to the purchase order transaction)
-        client: {
-          connect: {
-            id: req.user.clientId,
-          },
-        },
-        createdBy: {
-          connect: {
-            id: createdBy,
-          },
+      // these could be calculated from the transaction table but for now we are keeping it simple
+      totalAmountDue, // Amount which client is yet to pay to the supplier
+      totalAmountPaid, // Amount which client has already paid to the supplier
+      advancePaid, // Amount which client has already paid to the supplier as advance (not related to the purchase order transaction)
+      client: {
+        connect: {
+          id: req.user.clientId,
         },
       },
-    })
+      createdBy: {
+        connect: {
+          id: createdBy,
+        },
+      },
+    }
+
+    if (advancePaid > 0) {
+      newPurchaseOrder.PurchaseOrderTransaction = {
+        create: {
+          amount: advancePaid,
+          remarks: 'Advance paid',
+          type: 'ADVANCE',
+          transactionDate: date,
+          transactionMode: transactionMode || 'CASH',
+          externalReferenceNumber: externalReferenceNumber || null,
+        },
+      }
+    }
+
     success(res, { newPurchaseOrder }, 'Purchase order added successfully')
   } catch (error) {
     console.log(error)

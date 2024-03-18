@@ -25,8 +25,9 @@ model Client {
 
   // GST details
 
-  createdAt     DateTime        @default(now()) @db.Timestamp()
-  updatedAt     DateTime        @updatedAt @db.Timestamp()
+  createdAt DateTime @default(now()) @db.Timestamp()
+  updatedAt DateTime @updatedAt @db.Timestamp()
+
   Product       Product[]
   Category      Category[]
   Warehouse     Warehouse[]
@@ -47,10 +48,11 @@ model User {
   createdProducts Product[] @relation("CreatedByRelation")
   updatedProducts Product[] @relation("UpdatedByRelation")
 
-  createdAt              DateTime                 @default(now()) @db.Timestamp()
-  updatedAt              DateTime                 @updatedAt @db.Timestamp()
-  client                 Client?                  @relation(fields: [clientId], references: [id])
-  clientId               Int?
+  createdAt DateTime @default(now()) @db.Timestamp()
+  updatedAt DateTime @updatedAt @db.Timestamp()
+  client    Client?  @relation(fields: [clientId], references: [id])
+  clientId  Int?
+
   Warehouse              Warehouse[] // manager
   Supplier               Supplier[]
   PurchaseOrder          PurchaseOrder[]
@@ -81,23 +83,24 @@ model Product {
 
   images String[]
 
-  category         Category[]
-  client           Client              @relation(fields: [clientId], references: [id])
-  clientId         Int
-  warehouseProduct Warehouse_Product[]
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId Int
 
-  updatedBy       User?          @relation("UpdatedByRelation", fields: [updatedById], references: [id])
-  updatedById     Int
-  createdBy       User           @relation("CreatedByRelation", fields: [createdById], references: [id])
-  createdById     Int
-  createdAt       DateTime       @default(now()) @db.Timestamp()
-  updatedAt       DateTime       @updatedAt @db.Timestamp()
-  ProductType     ProductType    @relation(fields: [productTypeId], references: [id])
-  productTypeId   Int
-  PurchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId Int?
-  tags            ProductTags?   @relation(fields: [productTagsId], references: [id])
-  productTagsId   Int?
+  updatedBy   User?    @relation("UpdatedByRelation", fields: [updatedById], references: [id])
+  updatedById Int
+  createdBy   User     @relation("CreatedByRelation", fields: [createdById], references: [id])
+  createdById Int
+  createdAt   DateTime @default(now()) @db.Timestamp()
+  updatedAt   DateTime @updatedAt @db.Timestamp()
+
+  Category         Category[]
+  WarehouseProduct Warehouse_Product[]
+  ProductType      ProductType         @relation(fields: [productTypeId], references: [id])
+  productTypeId    Int
+  PurchaseOrder    PurchaseOrder?      @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId  Int?
+  Tags             ProductTags?        @relation(fields: [productTagsId], references: [id])
+  productTagsId    Int?
 }
 
 model ProductType {
@@ -110,7 +113,7 @@ model ProductType {
   client   Client @relation(fields: [clientId], references: [id])
   clientId Int
 
-  products Product[]
+  Products Product[]
 }
 
 model Category {
@@ -119,20 +122,20 @@ model Category {
 
   createdAt DateTime  @default(now()) @db.Timestamp()
   updatedAt DateTime  @updatedAt @db.Timestamp()
-  products  Product[]
+  Products  Product[]
 
   client      Client        @relation(fields: [clientId], references: [id])
   clientId    Int
-  subCategory subCategory[]
+  SubCategory SubCategory[]
 }
 
-model subCategory {
+model SubCategory {
   id   Int    @id @default(autoincrement())
   name String
 
   createdAt  DateTime @default(now()) @db.Timestamp()
   updatedAt  DateTime @updatedAt @db.Timestamp()
-  category   Category @relation(fields: [categoryId], references: [id])
+  Category   Category @relation(fields: [categoryId], references: [id])
   categoryId Int
 }
 
@@ -144,7 +147,7 @@ model Warehouse {
 
   createdAt        DateTime            @default(now()) @db.Timestamp()
   updatedAt        DateTime            @updatedAt @db.Timestamp()
-  warehouseProduct Warehouse_Product[]
+  WarehouseProduct Warehouse_Product[]
 
   manager   User? @relation(fields: [managerId], references: [id])
   managerId Int?
@@ -207,7 +210,38 @@ model PurchaseOrder {
   supplierId Int
   quantity   Int
 
-  // pricing
+  // virtual fields
+  totalAmountPaid Float @default(0)
+  totalAmountDue  Float @default(0)
+
+  // dates
+  deliveryDate DateTime?
+  orderDate    DateTime  @default(now()) @db.Timestamp()
+
+  orderStatus   PURCHASE_ORDER_STATUS         @default(DRAFT)
+  paymentStatus PURCHASE_ORDER_PAYMENT_STATUS @default(UNPAID)
+
+  createdBy   User? @relation(fields: [createdById], references: [id])
+  createdById Int?
+
+  createdAt              DateTime                 @default(now()) @db.Timestamp()
+  updatedAt              DateTime                 @updatedAt @db.Timestamp()
+  client                 Client                   @relation(fields: [clientId], references: [id])
+  clientId               Int
+  Products               Product[]
+  PurchaseOrderStatusLog PurchaseOrderStatusLog[]
+  PurchaseOrderInvoice   PurchaseOrderInvoice[]
+}
+
+model PurchaseOrderInvoice {
+  id            Int     @id @default(autoincrement())
+  invoiceNumber String
+  amount        Float
+  remarks       String?
+
+  invoiceDate    DateTime
+  invoiceDueDate DateTime?
+
   baseAmount   Float
   otherCharges Float @default(0) // tax free amount
   totalAmount  Float @default(0)
@@ -217,31 +251,17 @@ model PurchaseOrder {
   igst         Float @default(0)
   discount     Float @default(0)
 
-  // virtual fields
-  totalAmountPaid Float @default(0)
-  advancePaid     Float @default(0) // the amount paid in advance (not recorded in transactions)
-  totalAmountDue  Float @default(0)
+  PurchaseOrderInvoiceTransaction PurchaseOrderInvoiceTransaction[]
 
-  // dates
-  deliveryDate  DateTime?
-  orderStatus   PURCHASE_ORDER_STATUS         @default(DRAFT)
-  paymentStatus PURCHASE_ORDER_PAYMENT_STATUS @default(UNPAID)
-
-  createdBy   User? @relation(fields: [createdById], references: [id])
-  createdById Int?
-
-  createdAt                DateTime                   @default(now()) @db.Timestamp()
-  updatedAt                DateTime                   @updatedAt @db.Timestamp()
-  client                   Client                     @relation(fields: [clientId], references: [id])
-  clientId                 Int
-  PurchaseOrderTransaction PurchaseOrderTransaction[]
-  products                 Product[]
-  PurchaseOrderStatusLog   PurchaseOrderStatusLog[]
+  PurchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+  createdAt       DateTime      @default(now()) @db.Timestamp()
+  updatedAt       DateTime      @updatedAt @db.Timestamp()
 }
 
 model PurchaseOrderStatusLog {
   id              Int                   @id @default(autoincrement())
-  purchaseOrder   PurchaseOrder         @relation(fields: [purchaseOrderId], references: [id])
+  PurchaseOrder   PurchaseOrder         @relation(fields: [purchaseOrderId], references: [id])
   purchaseOrderId Int
   status          PURCHASE_ORDER_STATUS
   remarks         String?
@@ -254,20 +274,21 @@ model PurchaseOrderStatusLog {
   updatedAt   DateTime @updatedAt @db.Timestamp()
 }
 
-model PurchaseOrderTransaction {
-  id              Int           @id @default(autoincrement())
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId Int
-  amount          Float
-  remarks         String?
+model PurchaseOrderInvoiceTransaction {
+  id Int @id @default(autoincrement())
 
+  amount                  Float
+  remarks                 String?
+  type                    TRANSACTION_TYPE @default(NORMAL)
   transactionDate         DateTime
   externalReferenceNumber String?
 
   transactionMode TRANSACTION_MODE @default(CASH)
 
-  createdAt DateTime @default(now()) @db.Timestamp()
-  updatedAt DateTime @updatedAt @db.Timestamp()
+  createdAt              DateTime              @default(now()) @db.Timestamp()
+  updatedAt              DateTime              @updatedAt @db.Timestamp()
+  PurchaseOrderInvoice   PurchaseOrderInvoice? @relation(fields: [purchaseOrderInvoiceId], references: [id])
+  purchaseOrderInvoiceId Int?
 }
 
 enum PURCHASE_ORDER_STATUS {
@@ -281,6 +302,11 @@ enum PURCHASE_ORDER_PAYMENT_STATUS {
   PAID
   PARTIALLY_PAID
   UNPAID
+}
+
+enum TRANSACTION_TYPE {
+  ADVANCE
+  NORMAL
 }
 
 enum TRANSACTION_MODE {
