@@ -16,7 +16,7 @@ CREATE TYPE "TRANSACTION_MODE" AS ENUM ('CASH', 'CARD', 'UPI', 'NET_BANKING', 'C
 -- CreateTable
 CREATE TABLE "Client" (
     "id" SERIAL NOT NULL,
-    "name" TEXT NOT NULL,
+    "businessName" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "phone" TEXT NOT NULL,
     "address" TEXT NOT NULL,
@@ -163,7 +163,6 @@ CREATE TABLE "PurchaseOrder" (
     "name" TEXT,
     "description" TEXT,
     "notes" TEXT,
-    "supplierId" INTEGER NOT NULL,
     "quantity" INTEGER NOT NULL,
     "totalAmountPaid" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalAmountDue" DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -175,6 +174,7 @@ CREATE TABLE "PurchaseOrder" (
     "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP NOT NULL,
     "clientId" INTEGER NOT NULL,
+    "supplierId" INTEGER NOT NULL,
 
     CONSTRAINT "PurchaseOrder_pkey" PRIMARY KEY ("id")
 );
@@ -183,9 +183,8 @@ CREATE TABLE "PurchaseOrder" (
 CREATE TABLE "PurchaseOrderInvoice" (
     "id" SERIAL NOT NULL,
     "invoiceNumber" TEXT NOT NULL,
-    "amount" DOUBLE PRECISION NOT NULL,
     "remarks" TEXT,
-    "invoiceDate" TIMESTAMP(3) NOT NULL,
+    "invoiceDate" TIMESTAMP(3),
     "invoiceDueDate" TIMESTAMP(3),
     "baseAmount" DOUBLE PRECISION NOT NULL,
     "otherCharges" DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -303,13 +302,13 @@ ALTER TABLE "Supplier" ADD CONSTRAINT "Supplier_clientId_fkey" FOREIGN KEY ("cli
 ALTER TABLE "Supplier" ADD CONSTRAINT "Supplier_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "Supplier"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_supplierId_fkey" FOREIGN KEY ("supplierId") REFERENCES "Supplier"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PurchaseOrderInvoice" ADD CONSTRAINT "PurchaseOrderInvoice_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "PurchaseOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

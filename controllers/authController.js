@@ -35,7 +35,7 @@ const register = async (req, res) => {
       phone,
       client: {
         create: {
-          name: businessName,
+          businessName: businessName,
           email,
           phone,
           address,
@@ -77,7 +77,7 @@ const login = async (req, res) => {
       clientId: true,
       client: {
         select: {
-          name: true,
+          businessName: true,
         },
       },
     },

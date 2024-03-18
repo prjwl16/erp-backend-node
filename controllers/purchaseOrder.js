@@ -2,64 +2,94 @@ import { isValidCreatPurchaseOrderRequest } from '../middlewares/purchase-order.
 import { Router } from 'express'
 import prisma from '../prisma.js'
 import { invalidRequest, serverError, success } from '../utils/response.js'
+import { isSupplierExists } from '../middlewares/supplier.js'
 
 const limit = 10
 
 const createPurchaseOrder = async (req, res) => {
-  let {
-    name,
-    description,
-    notes,
-    supplierId,
-    baseAmount,
-    otherCharges,
-    totalAmount,
-    taxSlab,
-    cgst,
-    sgst,
-    igst,
-    advancePaid,
-    quantity,
-    date,
-    transactionMode,
-    externalReferenceNumber,
-  } = req.body
+  let { name, description, notes, quantity, deliveryDate, orderDate, supplierId, invoiceData, orderStatus } = req.body
   try {
     const { id: createdBy } = req.user
 
+    let {
+      invoiceNumber,
+      remarks,
+      invoiceDate,
+      invoiceDueDate,
+      baseAmount,
+      otherCharges,
+      totalAmount,
+      cgst,
+      sgst,
+      igst,
+      taxSlab,
+      advancePaid,
+      transactionMode,
+      externalReferenceNumber,
+    } = invoiceData
+
+    if (!orderDate) orderDate = new Date()
+    else orderDate = new Date(orderDate)
+
+    // Calculation
     const totalAmountDue = totalAmount - advancePaid
     const totalAmountPaid = advancePaid
     const paymentStatus = advancePaid === totalAmount ? 'PAID' : advancePaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID'
 
-    // check if the supplier exists
-    const supplier = await prisma.supplier.findUnique({
-      where: {
-        id: supplierId,
-      },
-    })
-    if (!supplier) {
-      return invalidRequest(res, 'Supplier not found')
+    // Create the purchase order
+    let transaction = {}
+    if (advancePaid > 0) {
+      transaction = {
+        amount: advancePaid,
+        remarks: 'Advance paid',
+        type: 'ADVANCE',
+        transactionDate: orderDate,
+        transactionMode: transactionMode || 'CASH',
+        externalReferenceNumber: externalReferenceNumber || null,
+      }
     }
 
-    const newPurchaseOrder = {
+    let newPurchaseOrder = {
       name,
       description,
+      notes,
+      quantity,
+      totalAmountDue,
+      totalAmountPaid,
+      deliveryDate: new Date(deliveryDate).getTime(),
+      paymentStatus,
+      orderStatus: orderStatus || 'DRAFT',
+      orderDate: new Date(orderDate),
+      createdBy: {
+        connect: {
+          id: createdBy,
+        },
+      },
+      client: {
+        connect: {
+          id: req.user.clientId,
+        },
+      },
       supplier: {
         connect: {
           id: supplierId,
         },
       },
-      quantity,
-      notes,
-      baseAmount,
-      cgst,
-      sgst,
-      igst,
-      taxSlab,
-      totalAmount,
-      otherCharges,
-      paymentStatus,
-      orderDate: date,
+      PurchaseOrderInvoice: {
+        create: {
+          invoiceNumber: invoiceNumber || '',
+          remarks: remarks || 'Purchase order created',
+          invoiceDate: invoiceDate ? new Date(invoiceDate) : null,
+          invoiceDueDate: invoiceDueDate ? new Date(invoiceDueDate) : null,
+          baseAmount,
+          otherCharges,
+          totalAmount,
+          taxSlab,
+          cgst,
+          sgst,
+          igst,
+        },
+      },
       PurchaseOrderStatusLog: {
         create: {
           remarks: 'Purchase order created',
@@ -71,35 +101,17 @@ const createPurchaseOrder = async (req, res) => {
           },
         },
       },
-
-      // these could be calculated from the transaction table but for now we are keeping it simple
-      totalAmountDue, // Amount which client is yet to pay to the supplier
-      totalAmountPaid, // Amount which client has already paid to the supplier
-      advancePaid, // Amount which client has already paid to the supplier as advance (not related to the purchase order transaction)
-      client: {
-        connect: {
-          id: req.user.clientId,
-        },
-      },
-      createdBy: {
-        connect: {
-          id: createdBy,
-        },
-      },
     }
 
     if (advancePaid > 0) {
-      newPurchaseOrder.PurchaseOrderTransaction = {
-        create: {
-          amount: advancePaid,
-          remarks: 'Advance paid',
-          type: 'ADVANCE',
-          transactionDate: date,
-          transactionMode: transactionMode || 'CASH',
-          externalReferenceNumber: externalReferenceNumber || null,
-        },
+      newPurchaseOrder.PurchaseOrderTransactions = {
+        create: transaction,
       }
     }
+
+    newPurchaseOrder = await prisma.purchaseOrder.create({
+      data: newPurchaseOrder,
+    })
 
     success(res, { newPurchaseOrder }, 'Purchase order added successfully')
   } catch (error) {
@@ -116,7 +128,7 @@ const getPurchaseOrderById = async (req, res) => {
         id: id,
       },
       include: {
-        PurchaseOrderTransaction: {
+        PurchaseOrderTransactions: {
           orderBy: {
             createdAt: 'desc',
           },
@@ -127,6 +139,7 @@ const getPurchaseOrderById = async (req, res) => {
             createdAt: 'desc',
           },
         },
+        Products: true,
       },
     })
     success(res, { purchaseOrder }, 'Purchase order fetched successfully')
@@ -147,7 +160,13 @@ const getAllPurchaseOrders = async (req, res) => {
       },
       include: {
         supplier: true,
-        createdBy: true,
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
       },
       skip: (page - 1) * limit,
       take: limit,
@@ -215,7 +234,7 @@ const updatePurchaseOrderStatus = async (req, res) => {
 const purchaseOrderRouter = Router()
 
 purchaseOrderRouter.get('/pages', getAllPurchaseOrders)
-purchaseOrderRouter.post('/', isValidCreatPurchaseOrderRequest, createPurchaseOrder)
+purchaseOrderRouter.post('/', isValidCreatPurchaseOrderRequest, isSupplierExists, createPurchaseOrder)
 purchaseOrderRouter.get('/:id', getPurchaseOrderById)
 purchaseOrderRouter.put('/status/:id', updatePurchaseOrderStatus)
 

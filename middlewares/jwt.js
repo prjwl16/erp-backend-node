@@ -22,7 +22,7 @@ export const verifyToken = async (req, res, next) => {
     }
     console.log('token verified : ', {
       user: req.user.email,
-      client: req.user.client.name,
+      client: req.user.client.businessName,
     })
     next()
   } else {

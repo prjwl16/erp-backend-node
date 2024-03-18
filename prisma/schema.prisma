@@ -14,11 +14,11 @@ datasource db {
 }
 
 model Client {
-  id      Int    @id @default(autoincrement())
-  name    String
-  email   String @unique
-  phone   String @unique
-  address String
+  id           Int    @id @default(autoincrement())
+  businessName String
+  email        String @unique
+  phone        String @unique
+  address      String
   // code    String @unique
 
   User User[]
@@ -202,61 +202,59 @@ model Supplier {
 model PurchaseOrder {
   id Int @id @default(autoincrement())
 
-  name        String?
-  description String?
-  notes       String?
-
-  supplier   Supplier @relation(fields: [supplierId], references: [id])
-  supplierId Int
-  quantity   Int
-
-  // virtual fields
-  totalAmountPaid Float @default(0)
-  totalAmountDue  Float @default(0)
-
+  name                      String?
+  description               String?
+  notes                     String?
+  quantity                  Int
+  // virtual fields (could be calculated)
+  totalAmountPaid           Float                         @default(0)
+  totalAmountDue            Float                         @default(0)
   // dates
-  deliveryDate DateTime?
-  orderDate    DateTime  @default(now()) @db.Timestamp()
-
-  orderStatus   PURCHASE_ORDER_STATUS         @default(DRAFT)
-  paymentStatus PURCHASE_ORDER_PAYMENT_STATUS @default(UNPAID)
-
-  createdBy   User? @relation(fields: [createdById], references: [id])
-  createdById Int?
-
-  createdAt              DateTime                 @default(now()) @db.Timestamp()
-  updatedAt              DateTime                 @updatedAt @db.Timestamp()
-  client                 Client                   @relation(fields: [clientId], references: [id])
-  clientId               Int
-  Products               Product[]
-  PurchaseOrderStatusLog PurchaseOrderStatusLog[]
-  PurchaseOrderInvoice   PurchaseOrderInvoice[]
+  deliveryDate              DateTime?
+  orderDate                 DateTime                      @default(now()) @db.Timestamp()
+  // statuses
+  orderStatus               PURCHASE_ORDER_STATUS         @default(DRAFT)
+  paymentStatus             PURCHASE_ORDER_PAYMENT_STATUS @default(UNPAID)
+  // createdBy user
+  createdBy                 User?                         @relation(fields: [createdById], references: [id])
+  createdById               Int?
+  // timestamps
+  createdAt                 DateTime                      @default(now()) @db.Timestamp()
+  updatedAt                 DateTime                      @updatedAt @db.Timestamp()
+  // relations
+  client                    Client                        @relation(fields: [clientId], references: [id])
+  clientId                  Int
+  supplier                  Supplier                      @relation(fields: [supplierId], references: [id])
+  supplierId                Int
+  Products                  Product[]
+  PurchaseOrderInvoice      PurchaseOrderInvoice[]
+  PurchaseOrderTransactions PurchaseOrderTransaction[]
+  PurchaseOrderStatusLog    PurchaseOrderStatusLog[]
 }
 
 model PurchaseOrderInvoice {
   id            Int     @id @default(autoincrement())
   invoiceNumber String
-  amount        Float
   remarks       String?
 
-  invoiceDate    DateTime
+  invoiceDate    DateTime?
   invoiceDueDate DateTime?
 
-  baseAmount   Float
-  otherCharges Float @default(0) // tax free amount
-  totalAmount  Float @default(0)
-  taxSlab      Float @default(0)
-  cgst         Float @default(0)
-  sgst         Float @default(0)
-  igst         Float @default(0)
-  discount     Float @default(0)
-
-  PurchaseOrderInvoiceTransaction PurchaseOrderInvoiceTransaction[]
-
-  PurchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId Int
-  createdAt       DateTime      @default(now()) @db.Timestamp()
-  updatedAt       DateTime      @updatedAt @db.Timestamp()
+  baseAmount               Float
+  otherCharges             Float                      @default(0) // tax free amount
+  totalAmount              Float                      @default(0)
+  taxSlab                  Float                      @default(0)
+  cgst                     Float                      @default(0)
+  sgst                     Float                      @default(0)
+  igst                     Float                      @default(0)
+  discount                 Float                      @default(0)
+  // relations
+  PurchaseOrder            PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId          Int
+  // timestamps
+  createdAt                DateTime                   @default(now()) @db.Timestamp()
+  updatedAt                DateTime                   @updatedAt @db.Timestamp()
+  PurchaseOrderTransaction PurchaseOrderTransaction[]
 }
 
 model PurchaseOrderStatusLog {
@@ -274,7 +272,7 @@ model PurchaseOrderStatusLog {
   updatedAt   DateTime @updatedAt @db.Timestamp()
 }
 
-model PurchaseOrderInvoiceTransaction {
+model PurchaseOrderTransaction {
   id Int @id @default(autoincrement())
 
   amount                  Float
@@ -289,6 +287,8 @@ model PurchaseOrderInvoiceTransaction {
   updatedAt              DateTime              @updatedAt @db.Timestamp()
   PurchaseOrderInvoice   PurchaseOrderInvoice? @relation(fields: [purchaseOrderInvoiceId], references: [id])
   purchaseOrderInvoiceId Int?
+  PurchaseOrder          PurchaseOrder?        @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId        Int?
 }
 
 enum PURCHASE_ORDER_STATUS {

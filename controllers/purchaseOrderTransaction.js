@@ -4,7 +4,7 @@ import { invalidRequest, serverError, success } from '../utils/response.js'
 
 const createPurchaseOrderTransaction = async (req, res) => {
   try {
-    const { purchaseOrderId, transactionAmount } = req.body
+    const { purchaseOrderId, transactionAmount, transactionDate } = req.body
 
     if (!purchaseOrderId || !transactionAmount) {
       return invalidRequest(res, 'Purchase order id and transaction amount are required')
@@ -39,33 +39,24 @@ const createPurchaseOrderTransaction = async (req, res) => {
 
     const paymentStatus = purchaseOrder.totalAmountDue - transactionAmount === 0 ? 'PAID' : 'PARTIALLY_PAID'
 
-    //TODO: rollback if any of the transaction fails
-
-    const result = await prisma.$transaction([
-      prisma.purchaseOrderTransaction.create({
-        data: {
-          amount: transactionAmount,
-          transactionDate: new Date(),
-          purchaseOrder: {
-            connect: {
-              id: purchaseOrderId,
-            },
+    const purchaseOrderData = await prisma.purchaseOrder.update({
+      where: {
+        id: purchaseOrderId,
+      },
+      data: {
+        totalAmountPaid: totalAmountPaid,
+        totalAmountDue: totalPendingAmount,
+        paymentStatus,
+        PurchaseOrderTransactions: {
+          create: {
+            amount: transactionAmount,
+            transactionDate: transactionDate ? new Date(transactionDate) : new Date(),
           },
         },
-      }),
-      prisma.purchaseOrder.update({
-        where: {
-          id: purchaseOrderId,
-        },
-        data: {
-          totalAmountPaid: totalAmountPaid,
-          totalAmountDue: totalPendingAmount,
-          paymentStatus,
-        },
-      }),
-    ])
+      },
+    })
 
-    return success(res, result, 'Purchase order transaction added successfully')
+    return success(res, { purchaseOrderData }, 'Purchase order transaction added successfully')
   } catch (error) {
     console.log(error)
     return serverError(res, 'Failed to add the purchase order transaction')
