@@ -211,7 +211,7 @@ model PurchaseOrder {
   totalAmountDue            Float                         @default(0)
   // dates
   deliveryDate              DateTime?
-  orderDate                 DateTime                      @default(now()) @db.Timestamp()
+  orderDate                 DateTime
   // statuses
   orderStatus               PURCHASE_ORDER_STATUS         @default(DRAFT)
   paymentStatus             PURCHASE_ORDER_PAYMENT_STATUS @default(UNPAID)

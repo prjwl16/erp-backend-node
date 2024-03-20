@@ -69,7 +69,7 @@ const deleteCategory = async (req, res) => {
 
     const products = await prisma.product.findMany({
       where: {
-        category: {
+        Category: {
           some: {
             id: id,
           },

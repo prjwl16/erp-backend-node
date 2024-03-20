@@ -3,14 +3,43 @@ import { Router } from 'express'
 import prisma from '../prisma.js'
 import { invalidRequest, serverError, success } from '../utils/response.js'
 import { isSupplierExists } from '../middlewares/supplier.js'
+import moment from 'moment'
 
 const limit = 10
 
+const parseDate = (date) => {
+  const parsedDate = moment(date, 'DD-MM-YYYY')
+  return new Date(parsedDate.valueOf())
+}
+
+const setDatesInCorrectFormat = (body) => {
+  if (body.deliveryDate) {
+    body.deliveryDate = parseDate(body.deliveryDate)
+  }
+  if (body.orderDate) {
+    body.orderDate = parseDate(body.orderDate)
+  }
+
+  if (body.invoiceData.invoiceDate) {
+    body.invoiceData.invoiceDate = parseDate(body.invoiceData.invoiceDate)
+  }
+
+  if (body.invoiceData.invoiceDueDate) {
+    body.invoiceData.invoiceDueDate = parseDate(body.invoiceData.invoiceDueDate)
+  }
+
+  if (body.invoiceData.transactionDate) {
+    body.invoiceData.transactionDate = parseDate(body.invoiceData.transactionDate)
+  }
+}
+
 const createPurchaseOrder = async (req, res) => {
-  let { name, description, notes, quantity, deliveryDate, orderDate, supplierId, invoiceData, orderStatus } = req.body
   try {
     const { id: createdBy } = req.user
 
+    setDatesInCorrectFormat(req.body)
+
+    let { name, description, notes, quantity, deliveryDate, orderDate, supplierId, invoiceData, orderStatus } = req.body
     let {
       invoiceNumber,
       remarks,
@@ -28,8 +57,7 @@ const createPurchaseOrder = async (req, res) => {
       externalReferenceNumber,
     } = invoiceData
 
-    if (!orderDate) orderDate = new Date()
-    else orderDate = new Date(orderDate)
+    console.log('req.body', req.body)
 
     // Calculation
     const totalAmountDue = totalAmount - advancePaid
@@ -56,10 +84,10 @@ const createPurchaseOrder = async (req, res) => {
       quantity,
       totalAmountDue,
       totalAmountPaid,
-      deliveryDate: new Date(deliveryDate).getTime(),
+      deliveryDate: deliveryDate,
       paymentStatus,
       orderStatus: orderStatus || 'DRAFT',
-      orderDate: new Date(orderDate),
+      orderDate: orderDate,
       createdBy: {
         connect: {
           id: createdBy,
@@ -79,8 +107,8 @@ const createPurchaseOrder = async (req, res) => {
         create: {
           invoiceNumber: invoiceNumber || '',
           remarks: remarks || 'Purchase order created',
-          invoiceDate: invoiceDate ? new Date(invoiceDate) : null,
-          invoiceDueDate: invoiceDueDate ? new Date(invoiceDueDate) : null,
+          invoiceDate: invoiceDate ? invoiceDate : null,
+          invoiceDueDate: invoiceDueDate ? invoiceDueDate : null,
           baseAmount,
           otherCharges,
           totalAmount,
@@ -108,6 +136,8 @@ const createPurchaseOrder = async (req, res) => {
         create: transaction,
       }
     }
+
+    console.log('newPurchaseOrder', newPurchaseOrder)
 
     newPurchaseOrder = await prisma.purchaseOrder.create({
       data: newPurchaseOrder,
