@@ -227,7 +227,7 @@ model PurchaseOrder {
   supplier                  Supplier                      @relation(fields: [supplierId], references: [id])
   supplierId                Int
   Products                  Product[]
-  PurchaseOrderInvoice      PurchaseOrderInvoice[]
+  PurchaseOrderInvoice      PurchaseOrderInvoice?
   PurchaseOrderTransactions PurchaseOrderTransaction[]
   PurchaseOrderStatusLog    PurchaseOrderStatusLog[]
 }
@@ -249,12 +249,12 @@ model PurchaseOrderInvoice {
   igst                     Float                      @default(0)
   discount                 Float                      @default(0)
   // relations
-  PurchaseOrder            PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId          Int
   // timestamps
   createdAt                DateTime                   @default(now()) @db.Timestamp()
   updatedAt                DateTime                   @updatedAt @db.Timestamp()
   PurchaseOrderTransaction PurchaseOrderTransaction[]
+  PurchaseOrder            PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId          Int                        @unique
 }
 
 model PurchaseOrderStatusLog {

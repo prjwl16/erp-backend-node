@@ -4,7 +4,8 @@ import { invalidRequest, serverError, success } from '../utils/response.js'
 
 const createPurchaseOrderTransaction = async (req, res) => {
   try {
-    const { purchaseOrderId, transactionAmount, transactionDate } = req.body
+    const { purchaseOrderId, transactionAmount, transactionDate, transactionMode, externalReferenceNumber, remarks } =
+      req.body
 
     if (!purchaseOrderId || !transactionAmount) {
       return invalidRequest(res, 'Purchase order id and transaction amount are required')
@@ -51,6 +52,9 @@ const createPurchaseOrderTransaction = async (req, res) => {
           create: {
             amount: transactionAmount,
             transactionDate: transactionDate ? new Date(transactionDate) : new Date(),
+            transactionMode: transactionMode || 'CASH',
+            remarks: remarks,
+            externalReferenceNumber: externalReferenceNumber,
           },
         },
       },

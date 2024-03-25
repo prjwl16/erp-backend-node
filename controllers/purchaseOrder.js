@@ -121,7 +121,7 @@ const createPurchaseOrder = async (req, res) => {
       PurchaseOrderStatusLog: {
         create: {
           remarks: 'Purchase order created',
-          status: 'PLACED',
+          status: orderStatus || 'DRAFT',
           updatedBy: {
             connect: {
               id: createdBy,
@@ -169,6 +169,7 @@ const getPurchaseOrderById = async (req, res) => {
             createdAt: 'desc',
           },
         },
+        PurchaseOrderInvoice: true,
         Products: true,
       },
     })
@@ -190,6 +191,7 @@ const getAllPurchaseOrders = async (req, res) => {
       },
       include: {
         supplier: true,
+        PurchaseOrderInvoice: true,
         createdBy: {
           select: {
             id: true,
@@ -239,7 +241,7 @@ const updatePurchaseOrderStatus = async (req, res) => {
       prisma.purchaseOrderStatusLog.create({
         data: {
           remarks: `Order status updated to ${orderStatus}`,
-          purchaseOrder: {
+          PurchaseOrder: {
             connect: {
               id,
             },

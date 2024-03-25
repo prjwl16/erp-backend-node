@@ -14,8 +14,8 @@ export const isValidCreatPurchaseOrderRequest = (req, res, next) => {
     }
 
     // compare with round figure
-    console.log(totalAmount, Math.round(baseAmount + otherCharges + cgst + sgst + igst))
-    if (totalAmount !== Math.round(baseAmount + otherCharges + cgst + sgst + igst)) {
+    console.log(Math.round(totalAmount), Math.round(baseAmount + otherCharges + cgst + sgst + igst))
+    if (Math.round(totalAmount) !== Math.round(baseAmount + otherCharges + cgst + sgst + igst)) {
       return invalidRequest(res, 'Total amount should be equal to base amount + tax amounts + other charges')
     }
     next()
