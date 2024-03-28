@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { serverError, success } from '../utils/response.js'
+import { invalidRequest, serverError, success } from '../utils/response.js'
 import prisma from '../prisma.js'
 
 const getUser = async (req, res) => {
@@ -32,11 +32,11 @@ const createUser = async (req, res) => {
 }
 
 const getAllUsers = async (req, res) => {
-  const { clientId } = req.user.clientId
-
+  const { id } = req.user.client
+  if (!id) return invalidRequest(res, 'Client Id not found')
   const users = await prisma.user.findMany({
     where: {
-      clientId: clientId,
+      clientId: id,
     },
     select: {
       id: true,

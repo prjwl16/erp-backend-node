@@ -38,7 +38,18 @@ const createWarehouse = async (req, res) => {
       }
     }
 
-    newWarehouse = await prisma.warehouse.create(newWarehouse)
+    newWarehouse = await prisma.warehouse.create({
+      data: newWarehouse.data,
+      include: {
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    })
 
     return success(res, { warehouse: newWarehouse }, 'Warehouse created successfully')
   } catch (error) {
