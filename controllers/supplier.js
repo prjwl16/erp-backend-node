@@ -67,9 +67,87 @@ const getSuppliers = async (req, res) => {
   }
 }
 
+const updateSupplier = async (req, res) => {
+  console.log('updateSupplier')
+  const id = parseFloat(req.params.id)
+  if (!id) {
+    return invalidRequest(res, 'Invalid supplier id')
+  }
+  const { firstName, lastName, email, phone, address, gstin } = req.body
+
+  try {
+    const supplier = await prisma.supplier.findFirst({
+      where: {
+        id,
+        client: {
+          id: req.user.client.id,
+        },
+      },
+    })
+
+    if (!supplier) {
+      return invalidRequest(res, 'Supplier not found')
+    }
+
+    const updatedSupplier = await prisma.supplier.update({
+      where: {
+        id,
+      },
+      data: {
+        firstName,
+        lastName,
+        gstin,
+        email,
+        phone,
+        address,
+      },
+    })
+
+    return success(res, { supplier: updatedSupplier }, 'Supplier updated successfully')
+  } catch (error) {
+    console.log(error)
+    return serverError(res, 'Failed to update the supplier')
+  }
+}
+
+const deleteSupplier = async (req, res) => {
+  const id = parseFloat(req.params.id)
+  if (!id) {
+    return invalidRequest(res, 'Invalid supplier id')
+  }
+
+  try {
+    const supplier = await prisma.supplier.findFirst({
+      where: {
+        id,
+        client: {
+          id: req.user.client.id,
+        },
+      },
+    })
+
+    if (!supplier) {
+      return invalidRequest(res, 'Supplier not found')
+    }
+
+    await prisma.supplier.delete({
+      where: {
+        id,
+      },
+    })
+
+    return success(res, {}, 'Supplier deleted successfully')
+  } catch (error) {
+    console.log(error)
+    return serverError(res, 'Failed to delete the supplier')
+  }
+}
+
 const supplierRouter = Router()
 
 supplierRouter.post('/', createSupplier)
 supplierRouter.get('/', getSuppliers)
+supplierRouter.put('/:id', updateSupplier)
+supplierRouter.delete('/:id', deleteSupplier)
 
 export default supplierRouter

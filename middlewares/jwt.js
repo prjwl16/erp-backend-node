@@ -20,10 +20,6 @@ export const verifyToken = async (req, res, next) => {
       console.log('error : ', error.message)
       return invalidRequest(res, 'Invalid token provided', 403)
     }
-    console.log('token verified : ', {
-      user: req.user.email,
-      client: req.user.client.businessName,
-    })
     next()
   } else {
     return invalidRequest(res, 'Unauthorized', 403)
