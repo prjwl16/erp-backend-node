@@ -166,6 +166,27 @@ const deleteProduct = async (req, res) => {
   }
 }
 
+const getProductsByWarehouseId = async (req, res) => {
+  try {
+    const { id } = req.params
+    const products = await prisma.warehouse_Product.findMany({
+      where: {
+        warehouseId: id,
+        warehouse: {
+          clientId: req.user.clientId,
+        },
+      },
+      include: {
+        product: true,
+      },
+    })
+    return success(res, { products }, 'Products fetched successfully')
+  } catch (e) {
+    console.error(e)
+    return serverError(res, 'Failed to fetch the products')
+  }
+}
+
 const limit = 10
 const getProducts = async (req, res) => {
   try {

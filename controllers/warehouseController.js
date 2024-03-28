@@ -84,30 +84,36 @@ const getAllWarehouses = async (req, res) => {
   }
 }
 
-const getProductsByWarehouseId = async (req, res) => {
+const getWarehouseById = async (req, res) => {
+  const id = parseFloat(req.params.id)
   try {
-    const { id } = req.params
-    const products = await prisma.warehouse_Product.findMany({
+    const warehouse = await prisma.warehouse.findUnique({
       where: {
-        warehouseId: id,
-        warehouse: {
-          clientId: req.user.clientId,
-        },
+        id: id,
       },
       include: {
-        product: true,
+        manager: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
       },
     })
-    return success(res, { products }, 'Products fetched successfully')
-  } catch (e) {
-    console.error(e)
-    return serverError(res, 'Failed to fetch the products')
+
+    return success(res, { warehouse }, 'Warehouse fetched successfully')
+  } catch (error) {
+    console.log(error)
+    return serverError(res, 'Failed to fetch the warehouse')
   }
 }
 
 const warehouseRouter = Router()
 
-warehouseRouter.get('/:id', getProductsByWarehouseId)
+warehouseRouter.get('/:id', getWarehouseById)
 warehouseRouter.post('/', createWarehouse)
 warehouseRouter.get('/', getAllWarehouses)
 

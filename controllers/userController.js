@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { invalidRequest, serverError, success } from '../utils/response.js'
 import prisma from '../prisma.js'
+import { hashPassword } from '../utils/authUtils.js'
 
 const getUser = async (req, res) => {
   const user = await prisma.user.findUnique({
@@ -13,16 +14,23 @@ const getUser = async (req, res) => {
 }
 
 const createUser = async (req, res) => {
-  const { name, email, password } = req.body
-
+  const { firstName, lastName, email, password } = req.body
+  const hashedPassword = await hashPassword(password)
   try {
     const newUser = await prisma.user.create({
       data: {
-        name,
+        firstName,
+        lastName,
         email,
-        password,
+        password: hashedPassword,
+        client: {
+          connect: {
+            id: req.user.client.id,
+          },
+        },
       },
     })
+    newUser.password = undefined
 
     return success(res, { user: newUser }, 'User created successfully')
   } catch (error) {
