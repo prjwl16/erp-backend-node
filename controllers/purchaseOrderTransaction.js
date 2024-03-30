@@ -35,8 +35,8 @@ const createPurchaseOrderTransaction = async (req, res) => {
 
     //amounts / fields to be updated in purchase order table
 
-    const totalPendingAmount = purchaseOrder.totalAmountDue - transactionAmount
-    const totalAmountPaid = purchaseOrder.totalAmountPaid + transactionAmount
+    const totalPendingAmount = parseFloat((purchaseOrder.totalAmountDue - transactionAmount).toFixed(2))
+    const totalAmountPaid = parseFloat((purchaseOrder.totalAmountPaid + transactionAmount).toFixed(2))
 
     const paymentStatus = purchaseOrder.totalAmountDue - transactionAmount === 0 ? 'PAID' : 'PARTIALLY_PAID'
 
@@ -102,7 +102,6 @@ const deletePurchaseOrderTransaction = async (req, res) => {
     if (!purchaseOrder) {
       return invalidRequest(res, 'Purchase order not found')
     }
-    console.log(purchaseOrder)
 
     const txnAmount = parseFloat(purchaseOrderTransaction.amount) || 0
 
