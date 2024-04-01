@@ -6,10 +6,10 @@ import router from './controllers/index.js'
 dotenv.config()
 
 const app = express()
+app.use(cors())
 app.use(express.json())
 
 //Routes
-app.use(cors())
 
 app.use('/api', router)
 
