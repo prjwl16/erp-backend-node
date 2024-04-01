@@ -206,9 +206,6 @@ model PurchaseOrder {
   description               String?
   notes                     String?
   quantity                  Int
-  // virtual fields (could be calculated)
-  totalAmountPaid           Float                         @default(0)
-  totalAmountDue            Float                         @default(0)
   // dates
   deliveryDate              DateTime?
   orderDate                 DateTime

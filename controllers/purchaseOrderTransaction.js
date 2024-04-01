@@ -1,52 +1,61 @@
 import { Router } from 'express'
 import prisma from '../prisma.js'
 import { invalidRequest, serverError, success } from '../utils/response.js'
+import { validateCreatePurchaseOrderTransactionRequest } from '../middlewares/purchaseOrderTransactions.js'
+import { getPurchaseOrderStatus } from '../utils/purchaseOrder.js'
 
-const createPurchaseOrderTransaction = async (req, res) => {
+const addPurchaseOrderTransaction = async (req, res) => {
   try {
     const { purchaseOrderId, transactionAmount, transactionDate, transactionMode, externalReferenceNumber, remarks } =
       req.body
 
-    if (!purchaseOrderId || !transactionAmount) {
-      return invalidRequest(res, 'Purchase order id and transaction amount are required')
-    }
-    if (transactionAmount <= 0) {
-      return invalidRequest(res, 'Transaction amount should be greater than 0')
-    }
-
     // get total pending amount to pay
-    const purchaseOrder = await prisma.purchaseOrder.findUnique({
+    const purchaseOrderPromise = prisma.purchaseOrder.findUnique({
       where: {
         id: purchaseOrderId,
       },
+      include: {
+        PurchaseOrderInvoice: true,
+        PurchaseOrderTransactions: true,
+      },
     })
+    const transactionSumPromise = prisma.purchaseOrderTransaction.aggregate({
+      where: {
+        purchaseOrderId: purchaseOrderId,
+      },
+      _sum: {
+        amount: true,
+      },
+    })
+    const [purchaseOrder, transactionSum] = await Promise.all([purchaseOrderPromise, transactionSumPromise])
 
     if (!purchaseOrder) {
       return invalidRequest(res, 'Purchase order not found')
     }
 
-    if (purchaseOrder.totalAmountDue <= 0) {
-      invalidRequest(res, 'No pending amount to pay')
+    let totalAmountPaid = transactionSum._sum.amount || 0
+    const totalAmountDue = purchaseOrder.PurchaseOrderInvoice.totalAmount - totalAmountPaid
+
+    if (totalAmountDue <= 0) {
+      return invalidRequest(res, 'No pending amount to pay')
     }
 
-    if (transactionAmount > purchaseOrder.totalAmountDue) {
+    if (transactionAmount > totalAmountDue) {
       return invalidRequest(res, 'Amount received cannot be greater than the pending amount')
     }
 
-    //amounts / fields to be updated in purchase order table
-
-    const totalPendingAmount = parseFloat((purchaseOrder.totalAmountDue - transactionAmount).toFixed(2))
-    const totalAmountPaid = parseFloat((purchaseOrder.totalAmountPaid + transactionAmount).toFixed(2))
-
-    const paymentStatus = purchaseOrder.totalAmountDue - transactionAmount === 0 ? 'PAID' : 'PARTIALLY_PAID'
+    // amounts / fields to be updated in purchase order table
+    const paymentStatus = getPurchaseOrderStatus(
+      totalAmountDue,
+      totalAmountPaid + transactionAmount,
+      purchaseOrder.PurchaseOrderInvoice.totalAmount
+    )
 
     const purchaseOrderData = await prisma.purchaseOrder.update({
       where: {
         id: purchaseOrderId,
       },
       data: {
-        totalAmountPaid: totalAmountPaid,
-        totalAmountDue: totalPendingAmount,
         paymentStatus,
         PurchaseOrderTransactions: {
           create: {
@@ -96,6 +105,7 @@ const deletePurchaseOrderTransaction = async (req, res) => {
       },
       include: {
         PurchaseOrderInvoice: true,
+        PurchaseOrderTransactions: true,
       },
     })
 
@@ -103,20 +113,25 @@ const deletePurchaseOrderTransaction = async (req, res) => {
       return invalidRequest(res, 'Purchase order not found')
     }
 
-    const txnAmount = parseFloat(purchaseOrderTransaction.amount) || 0
+    let totalAmountPaid = 0
+    purchaseOrder.PurchaseOrderTransactions.forEach((transaction) => {
+      totalAmountPaid += transaction.amount
+    })
 
-    const totalAmountPaid = parseFloat((purchaseOrder.totalAmountPaid - txnAmount).toFixed(2))
-    const totalAmountDue = parseFloat((purchaseOrder.totalAmountDue + txnAmount).toFixed(2))
+    const totalAmountDue = purchaseOrder.PurchaseOrderInvoice.totalAmount - totalAmountPaid
+    totalAmountPaid -= purchaseOrderTransaction.amount
 
-    const paymentStatus = totalAmountDue === 0 ? 'PAID' : 'PARTIALLY_PAID'
+    const paymentStatus = getPurchaseOrderStatus(
+      totalAmountDue,
+      totalAmountPaid,
+      purchaseOrder.PurchaseOrderInvoice.totalAmount
+    )
 
     const purchaseOrderData = await prisma.purchaseOrder.update({
       where: {
         id: purchaseOrderTransaction.purchaseOrderId,
       },
       data: {
-        totalAmountPaid: totalAmountPaid,
-        totalAmountDue: totalAmountDue,
         paymentStatus,
         PurchaseOrderTransactions: {
           delete: {
@@ -135,7 +150,7 @@ const deletePurchaseOrderTransaction = async (req, res) => {
 
 const purchaseOrderTransactionsRouter = Router()
 
-purchaseOrderTransactionsRouter.post('/', createPurchaseOrderTransaction)
+purchaseOrderTransactionsRouter.post('/', validateCreatePurchaseOrderTransactionRequest, addPurchaseOrderTransaction)
 purchaseOrderTransactionsRouter.delete('/:purchaseOrderTransactionId', deletePurchaseOrderTransaction)
 
 export default purchaseOrderTransactionsRouter

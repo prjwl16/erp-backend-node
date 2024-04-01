@@ -1,43 +1,19 @@
-import { isValidCreatPurchaseOrderRequest } from '../middlewares/purchase-order.js'
+import {
+  isValidCreatPurchaseOrderRequest,
+  setDatesInCorrectFormat,
+  validateUpdatePurchaseOrderRequest,
+} from '../middlewares/purchase-order.js'
 import { Router } from 'express'
 import prisma from '../prisma.js'
 import { invalidRequest, serverError, success } from '../utils/response.js'
 import { isSupplierExists } from '../middlewares/supplier.js'
-import moment from 'moment'
+import { getPurchaseOrderStatus } from '../utils/purchaseOrder.js'
 
 const limit = 10
-
-const parseDate = (date) => {
-  const parsedDate = moment(date, 'DD-MM-YYYY')
-  return new Date(parsedDate.valueOf())
-}
-
-const setDatesInCorrectFormat = (body) => {
-  if (body.deliveryDate) {
-    body.deliveryDate = parseDate(body.deliveryDate)
-  }
-  if (body.orderDate) {
-    body.orderDate = parseDate(body.orderDate)
-  }
-
-  if (body.invoiceData.invoiceDate) {
-    body.invoiceData.invoiceDate = parseDate(body.invoiceData.invoiceDate)
-  }
-
-  if (body.invoiceData.invoiceDueDate) {
-    body.invoiceData.invoiceDueDate = parseDate(body.invoiceData.invoiceDueDate)
-  }
-
-  if (body.invoiceData.transactionDate) {
-    body.invoiceData.transactionDate = parseDate(body.invoiceData.transactionDate)
-  }
-}
 
 const createPurchaseOrder = async (req, res) => {
   try {
     const { id: createdBy } = req.user
-
-    setDatesInCorrectFormat(req.body)
 
     let { name, description, notes, quantity, deliveryDate, orderDate, supplierId, invoiceData, orderStatus } = req.body
     let {
@@ -56,8 +32,6 @@ const createPurchaseOrder = async (req, res) => {
       transactionMode,
       externalReferenceNumber,
     } = invoiceData
-
-    console.log('req.body', req.body)
 
     // Calculation
     const totalAmountDue = totalAmount - advancePaid
@@ -137,8 +111,6 @@ const createPurchaseOrder = async (req, res) => {
       }
     }
 
-    console.log('newPurchaseOrder', newPurchaseOrder)
-
     newPurchaseOrder = await prisma.purchaseOrder.create({
       data: newPurchaseOrder,
     })
@@ -147,6 +119,218 @@ const createPurchaseOrder = async (req, res) => {
   } catch (error) {
     console.log(error)
     serverError(res, 'Failed to add the purchase order')
+  }
+}
+
+const updatePurchaseOrder = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id)
+    const {
+      name,
+      description,
+      notes,
+      quantity,
+      deliveryDate,
+      orderDate,
+      supplierId,
+      invoiceData,
+      orderStatus,
+      transactionsSum,
+    } = req.body
+    let {
+      invoiceNumber,
+      remarks,
+      invoiceDate,
+      invoiceDueDate,
+      baseAmount,
+      otherCharges,
+      totalAmount,
+      cgst,
+      sgst,
+      igst,
+      taxSlab,
+      advancePaid,
+      transactionMode,
+      externalReferenceNumber,
+    } = invoiceData
+
+    const purchaseOrder = await prisma.purchaseOrder.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        PurchaseOrderInvoice: true,
+        PurchaseOrderTransactions: true,
+      },
+    })
+    // resolve promises
+
+    let totalAmountPaid = transactionsSum || 0
+    let totalAmountDue = purchaseOrder.PurchaseOrderInvoice.totalAmount - totalAmountPaid
+
+    if (totalAmountPaid > totalAmount) {
+      return invalidRequest(
+        res,
+        'You have paid more than the total amount. Please delete the transactions or update the amount'
+      )
+    }
+    if (totalAmountDue < 0) {
+      return invalidRequest(res, 'Total amount paid is greater than total amount')
+    }
+
+    // Create the purchase order payload
+
+    //steps
+    // 1 check if the advance transaction is already present or not
+    // 2 if present & amount is 0 then delete the transaction
+    // 3 if present & amount is greater than 0 then update the transaction
+    // 4 if not present & amount is greater than 0 then create the transaction
+    // 5 if not present & amount is 0 then do nothing
+
+    let transaction = {
+      amount: advancePaid,
+      remarks: 'Advance paid',
+      type: 'ADVANCE',
+      transactionDate: orderDate,
+      transactionMode: transactionMode || 'CASH',
+      externalReferenceNumber: externalReferenceNumber || null,
+    }
+
+    // steps 1
+    const advanceTransaction = purchaseOrder.PurchaseOrderTransactions.find(
+      (transaction) => transaction.type === 'ADVANCE'
+    )
+    const advanceTransactionId = advanceTransaction ? advanceTransaction.id : null
+    const existingAdvancePaid = advanceTransaction ? advanceTransaction.amount : advancePaid
+
+    let actionOnTransaction = null
+
+    // steps 2 & 3
+    if (advanceTransactionId && advancePaid === 0) {
+      actionOnTransaction = 'delete'
+      totalAmountPaid -= existingAdvancePaid
+      totalAmountDue = totalAmount + existingAdvancePaid
+      transaction = {
+        id: advanceTransactionId,
+      }
+    } else if (advanceTransactionId && advancePaid > 0) {
+      totalAmountPaid -= existingAdvancePaid
+      totalAmountPaid += advancePaid
+
+      if (totalAmountPaid > totalAmount) {
+        return invalidRequest(
+          res,
+          'You have paid more than the total amount. Please delete the transactions or update the amount'
+        )
+      }
+
+      actionOnTransaction = 'update'
+      transaction = {
+        where: {
+          id: advanceTransactionId,
+        },
+        data: {
+          ...transaction,
+        },
+      }
+    }
+
+    // steps 4
+    if (!advanceTransactionId && advancePaid > 0) {
+      actionOnTransaction = 'create'
+      totalAmountPaid += advancePaid
+      totalAmountDue = totalAmount - advancePaid
+    }
+
+    const paymentStatus = getPurchaseOrderStatus(totalAmountDue, totalAmountPaid, totalAmount)
+    let updatedPurchaseOrder = {
+      name,
+      description,
+      notes,
+      quantity,
+      deliveryDate: deliveryDate,
+      paymentStatus,
+      orderStatus: orderStatus || 'DRAFT',
+      orderDate: orderDate,
+      supplier: {
+        connect: {
+          id: supplierId,
+        },
+      },
+      PurchaseOrderInvoice: {
+        update: {
+          invoiceNumber: invoiceNumber || '',
+          remarks: remarks || 'Purchase order created',
+          invoiceDate: invoiceDate ? invoiceDate : null,
+          invoiceDueDate: invoiceDueDate ? invoiceDueDate : null,
+          baseAmount,
+          otherCharges,
+          totalAmount,
+          taxSlab,
+          cgst,
+          sgst,
+          igst,
+        },
+      },
+      PurchaseOrderStatusLog: {
+        connectOrCreate: {
+          where: {
+            PurchaseOrder: {
+              is: {
+                id,
+              },
+            },
+          },
+          create: {
+            remarks: 'Purchase order updated',
+            status: orderStatus || 'DRAFT',
+            updatedBy: {
+              connect: {
+                id: req.user.id,
+              },
+            },
+          },
+        },
+      },
+    }
+
+    if (actionOnTransaction) {
+      updatedPurchaseOrder.PurchaseOrderTransactions = {
+        [actionOnTransaction]: {
+          ...transaction,
+        },
+      }
+    }
+
+    const newUpdatedPurchaseOrder = await prisma.purchaseOrder.update({
+      where: {
+        id,
+      },
+      data: {
+        ...updatedPurchaseOrder,
+        PurchaseOrderStatusLog: {
+          connectOrCreate: {
+            where: {
+              id: id,
+            },
+            create: {
+              remarks: 'Purchase order updated',
+              status: orderStatus || 'DRAFT',
+              updatedBy: {
+                connect: {
+                  id: req.user.id,
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    success(res, { updatedPurchaseOrder: newUpdatedPurchaseOrder }, 'Purchase order updated successfully')
+  } catch (error) {
+    console.log(error)
+    serverError(res, 'Failed to update the purchase order')
   }
 }
 
@@ -173,6 +357,13 @@ const getPurchaseOrderById = async (req, res) => {
         Products: true,
       },
     })
+
+    purchaseOrder.totalAmountPaid = 0
+    purchaseOrder.PurchaseOrderTransactions.forEach((transaction) => {
+      purchaseOrder.totalAmountPaid += transaction.amount
+    })
+    purchaseOrder.totalAmountDue = purchaseOrder.PurchaseOrderInvoice.totalAmount - purchaseOrder.totalAmountPaid
+
     success(res, { purchaseOrder }, 'Purchase order fetched successfully')
   } catch (error) {
     console.log(error)
@@ -266,8 +457,15 @@ const updatePurchaseOrderStatus = async (req, res) => {
 const purchaseOrderRouter = Router()
 
 purchaseOrderRouter.get('/pages', getAllPurchaseOrders)
-purchaseOrderRouter.post('/', isValidCreatPurchaseOrderRequest, isSupplierExists, createPurchaseOrder)
+purchaseOrderRouter.post(
+  '/',
+  isValidCreatPurchaseOrderRequest,
+  isSupplierExists,
+  setDatesInCorrectFormat,
+  createPurchaseOrder
+)
 purchaseOrderRouter.get('/:id', getPurchaseOrderById)
 purchaseOrderRouter.put('/status/:id', updatePurchaseOrderStatus)
+purchaseOrderRouter.put('/:id', validateUpdatePurchaseOrderRequest, setDatesInCorrectFormat, updatePurchaseOrder)
 
 export default purchaseOrderRouter
