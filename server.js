@@ -5,8 +5,13 @@ import router from './controllers/index.js'
 
 dotenv.config()
 
+// accept all origins
+const corsOptions = {
+  origin: '*',
+}
+
 const app = express()
-app.use(cors())
+app.use(cors(corsOptions))
 app.use(express.json())
 
 //Routes
