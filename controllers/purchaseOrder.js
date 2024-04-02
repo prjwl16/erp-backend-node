@@ -124,7 +124,7 @@ const createPurchaseOrder = async (req, res) => {
 
 const updatePurchaseOrder = async (req, res) => {
   try {
-    const id = parseInt(req.params.id)
+    const purchaseOrderId = parseInt(req.params.id)
     const {
       name,
       description,
@@ -135,7 +135,7 @@ const updatePurchaseOrder = async (req, res) => {
       supplierId,
       invoiceData,
       orderStatus,
-      transactionsSum,
+      totalAmountPaidCalculatedFromTransactions,
     } = req.body
     let {
       invoiceNumber,
@@ -156,29 +156,18 @@ const updatePurchaseOrder = async (req, res) => {
 
     const purchaseOrder = await prisma.purchaseOrder.findUnique({
       where: {
-        id,
+        id: purchaseOrderId,
       },
       include: {
         PurchaseOrderInvoice: true,
         PurchaseOrderTransactions: true,
       },
     })
-    // resolve promises
 
-    let totalAmountPaid = transactionsSum || 0
+    let totalAmountPaid = totalAmountPaidCalculatedFromTransactions || 0
     let totalAmountDue = purchaseOrder.PurchaseOrderInvoice.totalAmount - totalAmountPaid
 
-    if (totalAmountPaid > totalAmount) {
-      return invalidRequest(
-        res,
-        'You have paid more than the total amount. Please delete the transactions or update the amount'
-      )
-    }
-    if (totalAmountDue < 0) {
-      return invalidRequest(res, 'Total amount paid is greater than total amount')
-    }
-
-    // Create the purchase order payload
+    if (totalAmountDue < 0) return invalidRequest(res, 'Total amount paid is greater than total amount')
 
     //steps
     // 1 check if the advance transaction is already present or not
@@ -186,144 +175,112 @@ const updatePurchaseOrder = async (req, res) => {
     // 3 if present & amount is greater than 0 then update the transaction
     // 4 if not present & amount is greater than 0 then create the transaction
     // 5 if not present & amount is 0 then do nothing
-
-    let transaction = {
-      amount: advancePaid,
-      remarks: 'Advance paid',
-      type: 'ADVANCE',
-      transactionDate: orderDate,
-      transactionMode: transactionMode || 'CASH',
-      externalReferenceNumber: externalReferenceNumber || null,
-    }
-
+    let transaction = {}
     // steps 1
-    const advanceTransaction = purchaseOrder.PurchaseOrderTransactions.find(
+    let advanceAmountTransaction = purchaseOrder.PurchaseOrderTransactions.find(
       (transaction) => transaction.type === 'ADVANCE'
     )
-    const advanceTransactionId = advanceTransaction ? advanceTransaction.id : null
-    const existingAdvancePaid = advanceTransaction ? advanceTransaction.amount : advancePaid
 
     let actionOnTransaction = null
 
-    // steps 2 & 3
-    if (advanceTransactionId && advancePaid === 0) {
+    if (advanceAmountTransaction && advancePaid === advanceAmountTransaction.amount) {
+      advanceAmountTransaction = null
+    } else if (advanceAmountTransaction && advancePaid === 0) {
       actionOnTransaction = 'delete'
-      totalAmountPaid -= existingAdvancePaid
-      totalAmountDue = totalAmount + existingAdvancePaid
       transaction = {
-        id: advanceTransactionId,
+        id: advanceAmountTransaction.id,
       }
-    } else if (advanceTransactionId && advancePaid > 0) {
-      totalAmountPaid -= existingAdvancePaid
-      totalAmountPaid += advancePaid
-
-      if (totalAmountPaid > totalAmount) {
-        return invalidRequest(
-          res,
-          'You have paid more than the total amount. Please delete the transactions or update the amount'
-        )
-      }
-
+    } else if (advanceAmountTransaction && advancePaid > 0) {
       actionOnTransaction = 'update'
       transaction = {
         where: {
-          id: advanceTransactionId,
+          id: advanceAmountTransaction.id,
         },
         data: {
-          ...transaction,
+          amount: advancePaid,
+          remarks: 'Advance transaction updated',
+          type: 'ADVANCE',
+          transactionDate: orderDate,
+          transactionMode: transactionMode || 'CASH',
+          externalReferenceNumber: externalReferenceNumber || null,
         },
+      }
+    } else if (!advanceAmountTransaction && advancePaid > 0) {
+      actionOnTransaction = 'create'
+      transaction = {
+        amount: advancePaid,
+        remarks: 'Advance transaction added',
+        type: 'ADVANCE',
+        transactionDate: orderDate,
+        transactionMode: transactionMode || 'CASH',
+        externalReferenceNumber: externalReferenceNumber || null,
       }
     }
 
-    // steps 4
-    if (!advanceTransactionId && advancePaid > 0) {
-      actionOnTransaction = 'create'
-      totalAmountPaid += advancePaid
-      totalAmountDue = totalAmount - advancePaid
+    let transactionObject = undefined
+
+    if (actionOnTransaction) {
+      transactionObject = {
+        ...transaction,
+      }
+      if (actionOnTransaction === 'delete') {
+        totalAmountPaid = totalAmountPaid - advanceAmountTransaction?.amount
+        totalAmountDue = totalAmount - totalAmountPaid
+      } else if (actionOnTransaction === 'create') {
+        totalAmountPaid = totalAmountPaid + advancePaid
+        totalAmountDue = totalAmount - totalAmountPaid
+      } else if (actionOnTransaction === 'update') {
+        totalAmountPaid = totalAmountPaid - advanceAmountTransaction?.amount + advancePaid
+        totalAmountDue = totalAmount - totalAmountPaid
+
+        if (totalAmountPaid > totalAmount)
+          return invalidRequest(res, 'Total amount paid (including advance) is greater than total amount')
+      }
     }
 
     const paymentStatus = getPurchaseOrderStatus(totalAmountDue, totalAmountPaid, totalAmount)
-    let updatedPurchaseOrder = {
-      name,
-      description,
-      notes,
-      quantity,
-      deliveryDate: deliveryDate,
-      paymentStatus,
-      orderStatus: orderStatus || 'DRAFT',
-      orderDate: orderDate,
-      supplier: {
-        connect: {
-          id: supplierId,
-        },
-      },
-      PurchaseOrderInvoice: {
-        update: {
-          invoiceNumber: invoiceNumber || '',
-          remarks: remarks || 'Purchase order created',
-          invoiceDate: invoiceDate ? invoiceDate : null,
-          invoiceDueDate: invoiceDueDate ? invoiceDueDate : null,
-          baseAmount,
-          otherCharges,
-          totalAmount,
-          taxSlab,
-          cgst,
-          sgst,
-          igst,
-        },
-      },
-      PurchaseOrderStatusLog: {
-        connectOrCreate: {
-          where: {
-            PurchaseOrder: {
-              is: {
-                id,
-              },
-            },
-          },
-          create: {
-            remarks: 'Purchase order updated',
-            status: orderStatus || 'DRAFT',
-            updatedBy: {
-              connect: {
-                id: req.user.id,
-              },
-            },
-          },
-        },
-      },
-    }
-
-    if (actionOnTransaction) {
-      updatedPurchaseOrder.PurchaseOrderTransactions = {
-        [actionOnTransaction]: {
-          ...transaction,
-        },
-      }
-    }
 
     const newUpdatedPurchaseOrder = await prisma.purchaseOrder.update({
       where: {
-        id,
+        id: purchaseOrderId,
       },
       data: {
-        ...updatedPurchaseOrder,
-        PurchaseOrderStatusLog: {
-          connectOrCreate: {
-            where: {
-              id: id,
-            },
-            create: {
-              remarks: 'Purchase order updated',
-              status: orderStatus || 'DRAFT',
-              updatedBy: {
-                connect: {
-                  id: req.user.id,
-                },
-              },
-            },
+        name,
+        description,
+        notes,
+        quantity,
+        deliveryDate: deliveryDate,
+        paymentStatus,
+        orderStatus: orderStatus || 'DRAFT',
+        orderDate: orderDate,
+        supplier: {
+          connect: {
+            id: supplierId,
           },
         },
+        totalAmountDue,
+        totalAmountPaid,
+        PurchaseOrderInvoice: {
+          update: {
+            invoiceNumber: invoiceNumber || '',
+            remarks: remarks || 'Purchase order updated',
+            invoiceDate: invoiceDate ? invoiceDate : null,
+            invoiceDueDate: invoiceDueDate ? invoiceDueDate : null,
+            baseAmount,
+            otherCharges,
+            totalAmount,
+            taxSlab,
+            cgst,
+            sgst,
+            igst,
+          },
+        },
+        // add transaction if transactionObject is not undefined
+        ...(transactionObject && {
+          PurchaseOrderTransactions: {
+            [actionOnTransaction]: transactionObject,
+          },
+        }),
       },
     })
 
@@ -374,7 +331,7 @@ const getPurchaseOrderById = async (req, res) => {
 const getAllPurchaseOrders = async (req, res) => {
   try {
     const { page, orderStatus, paymentStatus } = req.query
-    const purchaseOrders = await prisma.purchaseOrder.findMany({
+    const purchaseOrdersPromise = prisma.purchaseOrder.findMany({
       where: {
         clientId: req.user.clientId,
         orderStatus: orderStatus || undefined,
@@ -397,13 +354,16 @@ const getAllPurchaseOrders = async (req, res) => {
         createdAt: 'desc',
       },
     })
-    const totalPurchaseOrders = await prisma.purchaseOrder.count({
+    const totalPurchaseOrdersPromise = prisma.purchaseOrder.count({
       where: {
         clientId: req.user.clientId,
         orderStatus: orderStatus || undefined,
         paymentStatus: paymentStatus || undefined,
       },
     })
+
+    const [purchaseOrders, totalPurchaseOrders] = await Promise.all([purchaseOrdersPromise, totalPurchaseOrdersPromise])
+
     success(res, { purchaseOrders, totalPurchaseOrders }, 'Purchase orders fetched successfully')
   } catch (error) {
     console.log(error)

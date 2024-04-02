@@ -212,6 +212,9 @@ model PurchaseOrder {
   // statuses
   orderStatus               PURCHASE_ORDER_STATUS         @default(DRAFT)
   paymentStatus             PURCHASE_ORDER_PAYMENT_STATUS @default(UNPAID)
+  // pricing
+  totalAmountPaid           Float                         @default(0)
+  totalAmountDue            Float                         @default(0)
   // createdBy user
   createdBy                 User?                         @relation(fields: [createdById], references: [id])
   createdById               Int?
@@ -237,21 +240,20 @@ model PurchaseOrderInvoice {
   invoiceDate    DateTime?
   invoiceDueDate DateTime?
 
-  baseAmount               Float
-  otherCharges             Float                      @default(0) // tax free amount
-  totalAmount              Float                      @default(0)
-  taxSlab                  Float                      @default(0)
-  cgst                     Float                      @default(0)
-  sgst                     Float                      @default(0)
-  igst                     Float                      @default(0)
-  discount                 Float                      @default(0)
+  baseAmount      Float
+  otherCharges    Float         @default(0) // tax free amount
+  totalAmount     Float         @default(0)
+  taxSlab         Float         @default(0)
+  cgst            Float         @default(0)
+  sgst            Float         @default(0)
+  igst            Float         @default(0)
+  discount        Float         @default(0)
   // relations
   // timestamps
-  createdAt                DateTime                   @default(now()) @db.Timestamp()
-  updatedAt                DateTime                   @updatedAt @db.Timestamp()
-  PurchaseOrderTransaction PurchaseOrderTransaction[]
-  PurchaseOrder            PurchaseOrder              @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId          Int                        @unique
+  createdAt       DateTime      @default(now()) @db.Timestamp()
+  updatedAt       DateTime      @updatedAt @db.Timestamp()
+  PurchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int           @unique
 }
 
 model PurchaseOrderStatusLog {
@@ -280,12 +282,10 @@ model PurchaseOrderTransaction {
 
   transactionMode TRANSACTION_MODE @default(CASH)
 
-  createdAt              DateTime              @default(now()) @db.Timestamp()
-  updatedAt              DateTime              @updatedAt @db.Timestamp()
-  PurchaseOrderInvoice   PurchaseOrderInvoice? @relation(fields: [purchaseOrderInvoiceId], references: [id])
-  purchaseOrderInvoiceId Int?
-  PurchaseOrder          PurchaseOrder?        @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId        Int?
+  createdAt       DateTime       @default(now()) @db.Timestamp()
+  updatedAt       DateTime       @updatedAt @db.Timestamp()
+  PurchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int?
 }
 
 enum PURCHASE_ORDER_STATUS {

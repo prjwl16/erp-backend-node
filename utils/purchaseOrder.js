@@ -10,3 +10,11 @@ export const getPurchaseOrderStatus = (totalDueAmount, totalAmountPaid, totalAmo
   }
   return paymentStatus
 }
+
+export const getPurchaseOrderDueAmount = (totalAmountPaid, totalAmount) => {
+  return totalAmount - totalAmountPaid
+}
+
+export const getPurchaseOrderTotalAmountPaid = (totalAmountPaid, transactionAmount) => {
+  return totalAmountPaid + transactionAmount
+}

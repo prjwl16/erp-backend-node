@@ -2,6 +2,13 @@ import { invalidRequest, serverError } from '../utils/response.js'
 import moment from 'moment/moment.js'
 import prisma from '../prisma.js'
 
+const parseDate = (date) => {
+  const parsedDate = moment(date, 'YYYY-MM-DD')
+  // set indian timezone
+  parsedDate.utcOffset('+05:30')
+  return new Date(parsedDate.valueOf())
+}
+
 export const isValidCreatPurchaseOrderRequest = (req, res, next) => {
   try {
     const { totalAmount, baseAmount, otherCharges, advancePaid, cgst, sgst, igst } = req.body.invoiceData
@@ -16,7 +23,6 @@ export const isValidCreatPurchaseOrderRequest = (req, res, next) => {
     }
 
     // compare with round figure
-    console.log(Math.round(totalAmount), Math.round(baseAmount + otherCharges + cgst + sgst + igst))
     if (Math.round(totalAmount) !== Math.round(baseAmount + otherCharges + cgst + sgst + igst)) {
       return invalidRequest(res, 'Total amount should be equal to base amount + tax amounts + other charges')
     }
@@ -25,11 +31,6 @@ export const isValidCreatPurchaseOrderRequest = (req, res, next) => {
     console.log(error)
     serverError(res, 'Failed to fetch the purchase orders')
   }
-}
-
-const parseDate = (date) => {
-  const parsedDate = moment(date, 'DD-MM-YYYY')
-  return new Date(parsedDate.valueOf())
 }
 
 export const setDatesInCorrectFormat = (req, res, next) => {
@@ -71,13 +72,17 @@ export const validateUpdatePurchaseOrderRequest = async (req, res, next) => {
 
     const { advancePaid, totalAmount, baseAmount, otherCharges, cgst, sgst, igst } = req.body.invoiceData
 
+    // compare with round figure
+    if (Math.round(totalAmount) !== Math.round(baseAmount + otherCharges + cgst + sgst + igst)) {
+      return invalidRequest(res, 'Total amount should be equal to base amount + tax amounts + other charges')
+    }
+
     if (advancePaid > totalAmount) {
       return invalidRequest(res, 'Advance paid cannot be greater than total amount')
     }
 
-    // compare with round figure
-    if (Math.round(totalAmount) !== Math.round(baseAmount + otherCharges + cgst + sgst + igst)) {
-      return invalidRequest(res, 'Total amount should be equal to base amount + tax amounts + other charges')
+    if (advancePaid < 0) {
+      return invalidRequest(res, 'Advance paid cannot be negative')
     }
 
     // check the transactions for this purchase order and the sum of the transactions
@@ -91,14 +96,21 @@ export const validateUpdatePurchaseOrderRequest = async (req, res, next) => {
     })
 
     if (transactionsSum._sum.amount > totalAmount) {
-      return invalidRequest(res, 'Sum of transactions cannot be greater than total amount')
+      return invalidRequest(
+        res,
+        'You have paid more than the total amount. Please delete the transactions or update the amount'
+      )
     }
 
-    req.body.transactionsSum = transactionsSum._sum.amount
+    req.body.totalAmountPaidCalculatedFromTransactions = transactionsSum._sum.amount
 
     next()
   } catch (error) {
     console.log(error)
     serverError(res, 'Failed to validate the purchase order')
   }
+}
+
+export const calculateTotalDueAmount = (finalInvoiceTotalAmount, finalTotalPaidAmount) => {
+  return finalInvoiceTotalAmount - finalTotalPaidAmount
 }
