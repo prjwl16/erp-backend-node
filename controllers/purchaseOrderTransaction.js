@@ -10,7 +10,7 @@ const addPurchaseOrderTransaction = async (req, res) => {
       req.body
 
     // get total pending amount to pay
-    const purchaseOrderPromise = prisma.purchaseOrder.findUnique({
+    const purchaseOrder = await prisma.purchaseOrder.findUnique({
       where: {
         id: purchaseOrderId,
       },
@@ -19,35 +19,30 @@ const addPurchaseOrderTransaction = async (req, res) => {
         PurchaseOrderTransactions: true,
       },
     })
-    const transactionSumPromise = prisma.purchaseOrderTransaction.aggregate({
-      where: {
-        purchaseOrderId: purchaseOrderId,
-      },
-      _sum: {
-        amount: true,
-      },
-    })
-    const [purchaseOrder, transactionSum] = await Promise.all([purchaseOrderPromise, transactionSumPromise])
 
     if (!purchaseOrder) {
       return invalidRequest(res, 'Purchase order not found')
     }
 
-    let totalAmountPaid = transactionSum._sum.amount || 0
-    const totalAmountDue = purchaseOrder.PurchaseOrderInvoice.totalAmount - totalAmountPaid
+    // while adding logic:
+    // 1. add the transaction amount to totalAmountPaid
+    // 2. subtract the transaction amount from totalAmountDue
+
+    const totalAmountPaid = purchaseOrder.totalAmountPaid + transactionAmount
+    const totalAmountDue = purchaseOrder.totalAmountDue - transactionAmount
 
     if (totalAmountDue <= 0) {
       return invalidRequest(res, 'No pending amount to pay')
     }
 
     if (transactionAmount > totalAmountDue) {
-      return invalidRequest(res, 'Amount received cannot be greater than the pending amount')
+      return invalidRequest(res, 'Amount is greater than the pending amount')
     }
 
     // amounts / fields to be updated in purchase order table
     const paymentStatus = getPurchaseOrderStatus(
       totalAmountDue,
-      totalAmountPaid + transactionAmount,
+      totalAmountPaid,
       purchaseOrder.PurchaseOrderInvoice.totalAmount
     )
 
@@ -57,6 +52,8 @@ const addPurchaseOrderTransaction = async (req, res) => {
       },
       data: {
         paymentStatus,
+        totalAmountPaid,
+        totalAmountDue,
         PurchaseOrderTransactions: {
           create: {
             amount: transactionAmount,
@@ -113,13 +110,12 @@ const deletePurchaseOrderTransaction = async (req, res) => {
       return invalidRequest(res, 'Purchase order not found')
     }
 
-    let totalAmountPaid = 0
-    purchaseOrder.PurchaseOrderTransactions.forEach((transaction) => {
-      totalAmountPaid += transaction.amount
-    })
+    // while deleting logic:
+    // 1. subtract the transaction amount from totalAmountPaid
+    // 2. add the transaction amount to totalAmountDue
 
-    const totalAmountDue = purchaseOrder.PurchaseOrderInvoice.totalAmount - totalAmountPaid
-    totalAmountPaid -= purchaseOrderTransaction.amount
+    const totalAmountDue = purchaseOrder.totalAmountDue + purchaseOrderTransaction.amount
+    const totalAmountPaid = purchaseOrder.totalAmountPaid - purchaseOrderTransaction.amount
 
     const paymentStatus = getPurchaseOrderStatus(
       totalAmountDue,
@@ -133,6 +129,8 @@ const deletePurchaseOrderTransaction = async (req, res) => {
       },
       data: {
         paymentStatus,
+        totalAmountPaid,
+        totalAmountDue,
         PurchaseOrderTransactions: {
           delete: {
             id: purchaseOrderTransactionId,

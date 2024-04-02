@@ -314,13 +314,6 @@ const getPurchaseOrderById = async (req, res) => {
         Products: true,
       },
     })
-
-    purchaseOrder.totalAmountPaid = 0
-    purchaseOrder.PurchaseOrderTransactions.forEach((transaction) => {
-      purchaseOrder.totalAmountPaid += transaction.amount
-    })
-    purchaseOrder.totalAmountDue = purchaseOrder.PurchaseOrderInvoice.totalAmount - purchaseOrder.totalAmountPaid
-
     success(res, { purchaseOrder }, 'Purchase order fetched successfully')
   } catch (error) {
     console.log(error)
