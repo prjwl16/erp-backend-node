@@ -1,7 +1,5 @@
 // in case of adding the txn pass the totalAmountPaid + transaction amount
 export const getPurchaseOrderStatus = (totalDueAmount, totalAmountPaid, totalAmount) => {
-  console.log(totalDueAmount, totalAmountPaid, totalAmount)
-
   let paymentStatus = 'UNPAID'
   if (totalAmountPaid === totalAmount) {
     paymentStatus = 'PAID'

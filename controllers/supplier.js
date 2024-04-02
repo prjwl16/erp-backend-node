@@ -2,6 +2,7 @@ import prisma from '../prisma.js'
 import { Router } from 'express'
 import { invalidRequest, serverError, success } from '../utils/response.js'
 
+const limit = 10
 const createSupplier = async (req, res) => {
   const { firstName, lastName, email, phone, address, gstin } = req.body
   const { id: createdBy } = req.user
@@ -143,11 +144,62 @@ const deleteSupplier = async (req, res) => {
   }
 }
 
+const getPurchaseOrdersBySupplier = async (req, res) => {
+  try {
+    const supplierId = parseInt(req.params.supplierId)
+    const page = parseInt(req.params.page)
+
+    const supplier = await prisma.supplier.findFirst({
+      where: {
+        id: supplierId,
+      },
+    })
+    if (!supplier) {
+      return invalidRequest(res, 'Supplier not found')
+    }
+
+    const purchaseOrdersPromise = prisma.purchaseOrder.findMany({
+      where: {
+        supplierId: supplierId,
+      },
+      include: {
+        PurchaseOrderInvoice: true,
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit,
+      skip: page * limit,
+    })
+
+    const purchaseOrdersCountPromise = prisma.purchaseOrder.count({
+      where: {
+        supplierId: supplierId,
+      },
+    })
+
+    const [purchaseOrders, purchaseOrdersCount] = await Promise.all([purchaseOrdersPromise, purchaseOrdersCountPromise])
+
+    success(res, { supplier, purchaseOrders, purchaseOrdersCount }, 'Purchase orders fetched successfully')
+  } catch (error) {
+    console.log(error)
+    serverError(res, 'Failed to fetch the purchase orders')
+  }
+}
+
 const supplierRouter = Router()
 
 supplierRouter.post('/', createSupplier)
 supplierRouter.get('/', getSuppliers)
 supplierRouter.put('/:id', updateSupplier)
 supplierRouter.delete('/:id', deleteSupplier)
+supplierRouter.get('/:supplierId/purchase-orders/:page', getPurchaseOrdersBySupplier)
 
 export default supplierRouter
