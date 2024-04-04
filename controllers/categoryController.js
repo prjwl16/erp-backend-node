@@ -16,10 +16,13 @@ const createCategory = async (req, res) => {
     invalidRequest(res, 'Category already exists')
   }
 
+  // make first letter capital
+  const categoryName = name.charAt(0).toUpperCase() + name.slice(1)
+
   try {
     const newCategory = await prisma.category.create({
       data: {
-        name: name?.toLowerCase(),
+        name: categoryName,
         client: {
           connect: {
             id: req.user.client.id,

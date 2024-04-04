@@ -65,6 +65,8 @@ const createProduct = async (req, res) => {
       tags,
     } = data
 
+    console.log('data', data)
+
     const product = await prisma.product.create({
       data: {
         name: productName,
@@ -84,9 +86,17 @@ const createProduct = async (req, res) => {
             id: productTypeId,
           },
         },
-        tags: tags,
+        // conditionally connect to many tags
+        ...(tags &&
+          tags.length > 0 && {
+            tags: {
+              connect: tags.map((tag) => ({
+                id: tag.id,
+              })),
+            },
+          }),
         //connect to many category
-        category: {
+        Category: {
           connect: {
             id: categoryId,
           },
@@ -96,7 +106,7 @@ const createProduct = async (req, res) => {
             id: req.user.client.id,
           },
         },
-        warehouseProduct: {
+        WarehouseProduct: {
           createMany: {
             data: warehouses,
           },
@@ -197,13 +207,13 @@ const getProducts = async (req, res) => {
         clientId: req.user.clientId,
       },
       include: {
-        category: {
+        Category: {
           select: {
             id: true,
             name: true,
           },
         },
-        warehouseProduct: {
+        WarehouseProduct: {
           include: {
             warehouse: {
               select: {
