@@ -238,7 +238,12 @@ const updatePurchaseOrder = async (req, res) => {
       }
     }
 
+    if (totalAmountDue < 0) return invalidRequest(res, 'Total amount paid is greater than total amount')
+
     const paymentStatus = getPurchaseOrderStatus(totalAmountDue, totalAmountPaid, totalAmount)
+
+    totalAmountDue = parseFloat(totalAmountDue.toFixed(2))
+    totalAmountPaid = parseFloat(totalAmountPaid.toFixed(2))
 
     const newUpdatedPurchaseOrder = await prisma.purchaseOrder.update({
       where: {

@@ -29,14 +29,16 @@ const addPurchaseOrderTransaction = async (req, res) => {
     // 2. subtract the transaction amount from totalAmountDue
 
     const totalAmountPaid = purchaseOrder.totalAmountPaid + transactionAmount
-    const totalAmountDue = purchaseOrder.totalAmountDue - transactionAmount
-
-    if (totalAmountDue <= 0) {
-      return invalidRequest(res, 'No pending amount to pay')
-    }
+    let totalAmountDue = purchaseOrder.totalAmountDue
 
     if (transactionAmount > totalAmountDue) {
       return invalidRequest(res, 'Amount is greater than the pending amount')
+    }
+
+    totalAmountDue = totalAmountDue - transactionAmount
+
+    if (totalAmountDue < 0) {
+      return invalidRequest(res, 'No pending amount to pay')
     }
 
     // amounts / fields to be updated in purchase order table
@@ -114,8 +116,8 @@ const deletePurchaseOrderTransaction = async (req, res) => {
     // 1. subtract the transaction amount from totalAmountPaid
     // 2. add the transaction amount to totalAmountDue
 
-    const totalAmountDue = purchaseOrder.totalAmountDue + purchaseOrderTransaction.amount
-    const totalAmountPaid = purchaseOrder.totalAmountPaid - purchaseOrderTransaction.amount
+    const totalAmountDue = parseFloat((purchaseOrder.totalAmountDue + purchaseOrderTransaction.amount).toFixed(2))
+    const totalAmountPaid = parseFloat((purchaseOrder.totalAmountPaid - purchaseOrderTransaction.amount).toFixed(2))
 
     const paymentStatus = getPurchaseOrderStatus(
       totalAmountDue,
