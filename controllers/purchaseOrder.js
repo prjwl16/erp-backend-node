@@ -328,7 +328,8 @@ const getPurchaseOrderById = async (req, res) => {
 
 const getAllPurchaseOrders = async (req, res) => {
   try {
-    const { page, orderStatus, paymentStatus } = req.query
+    const { page, filter } = req.body
+    const { orderStatus, paymentStatus } = filter ? filter : {}
     const purchaseOrdersPromise = prisma.purchaseOrder.findMany({
       where: {
         clientId: req.user.clientId,
@@ -367,6 +368,26 @@ const getAllPurchaseOrders = async (req, res) => {
     console.log(error)
     serverError(res, 'Failed to fetch the purchase orders')
   }
+}
+
+const getPurchaseOrderInsights = async (req, res) => {
+  const clientId = req.user.client.id
+
+  const insights = await prisma.purchaseOrder.groupBy({
+    by: ['paymentStatus'],
+    _sum: {
+      totalAmountPaid: true,
+      totalAmountDue: true,
+    },
+    _count: {
+      id: true,
+    },
+    where: {
+      clientId,
+    },
+  })
+
+  return success(res, { insights }, 'Purchase order insights fetched successfully')
 }
 
 const updatePurchaseOrderStatus = async (req, res) => {
@@ -414,7 +435,7 @@ const updatePurchaseOrderStatus = async (req, res) => {
 
 const purchaseOrderRouter = Router()
 
-purchaseOrderRouter.get('/pages', getAllPurchaseOrders)
+purchaseOrderRouter.post('/filter', getAllPurchaseOrders)
 purchaseOrderRouter.post(
   '/',
   isValidCreatPurchaseOrderRequest,
@@ -422,6 +443,7 @@ purchaseOrderRouter.post(
   setDatesInCorrectFormat,
   createPurchaseOrder
 )
+purchaseOrderRouter.get('/insights', getPurchaseOrderInsights)
 purchaseOrderRouter.get('/:id', getPurchaseOrderById)
 purchaseOrderRouter.put('/status/:id', updatePurchaseOrderStatus)
 purchaseOrderRouter.put('/:id', validateUpdatePurchaseOrderRequest, setDatesInCorrectFormat, updatePurchaseOrder)

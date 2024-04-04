@@ -147,7 +147,7 @@ const deleteSupplier = async (req, res) => {
 const getPurchaseOrdersBySupplier = async (req, res) => {
   try {
     const supplierId = parseInt(req.params.supplierId)
-    const page = parseInt(req.params.page)
+    const page = parseInt(req.params.page) - 1
 
     const supplier = await prisma.supplier.findFirst({
       where: {
@@ -160,7 +160,9 @@ const getPurchaseOrdersBySupplier = async (req, res) => {
 
     const purchaseOrdersPromise = prisma.purchaseOrder.findMany({
       where: {
-        supplierId: supplierId,
+        supplier: {
+          id: supplierId,
+        },
       },
       include: {
         PurchaseOrderInvoice: true,
@@ -171,6 +173,7 @@ const getPurchaseOrdersBySupplier = async (req, res) => {
             lastName: true,
           },
         },
+        supplier: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -185,9 +188,9 @@ const getPurchaseOrdersBySupplier = async (req, res) => {
       },
     })
 
-    const [purchaseOrders, purchaseOrdersCount] = await Promise.all([purchaseOrdersPromise, purchaseOrdersCountPromise])
+    const [purchaseOrders, totalPurchaseOrders] = await Promise.all([purchaseOrdersPromise, purchaseOrdersCountPromise])
 
-    success(res, { supplier, purchaseOrders, purchaseOrdersCount }, 'Purchase orders fetched successfully')
+    return success(res, { supplier, purchaseOrders, totalPurchaseOrders }, 'Purchase orders fetched successfully')
   } catch (error) {
     console.log(error)
     serverError(res, 'Failed to fetch the purchase orders')
@@ -196,10 +199,10 @@ const getPurchaseOrdersBySupplier = async (req, res) => {
 
 const supplierRouter = Router()
 
+supplierRouter.get('/:supplierId/:page', getPurchaseOrdersBySupplier)
 supplierRouter.post('/', createSupplier)
-supplierRouter.get('/', getSuppliers)
 supplierRouter.put('/:id', updateSupplier)
 supplierRouter.delete('/:id', deleteSupplier)
-supplierRouter.get('/:supplierId/purchase-orders/:page', getPurchaseOrdersBySupplier)
+supplierRouter.get('/', getSuppliers)
 
 export default supplierRouter
