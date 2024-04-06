@@ -28,12 +28,13 @@ model Client {
   createdAt DateTime @default(now()) @db.Timestamp()
   updatedAt DateTime @updatedAt @db.Timestamp()
 
-  Product       Product[]
-  Category      Category[]
-  Warehouse     Warehouse[]
-  ProductType   ProductType[]
-  Supplier      Supplier[]
-  PurchaseOrder PurchaseOrder[]
+  Product              Product[]
+  Category             Category[]
+  Warehouse            Warehouse[]
+  ProductType          ProductType[]
+  Supplier             Supplier[]
+  PurchaseOrder        PurchaseOrder[]
+  PurchaseOrderInvoice PurchaseOrderInvoice[]
 }
 
 model User {
@@ -254,6 +255,8 @@ model PurchaseOrderInvoice {
   updatedAt       DateTime      @updatedAt @db.Timestamp()
   PurchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
   purchaseOrderId Int           @unique
+  client          Client        @relation(fields: [clientId], references: [id])
+  clientId        Int
 }
 
 model PurchaseOrderStatusLog {

@@ -34,8 +34,8 @@ const createPurchaseOrder = async (req, res) => {
     } = invoiceData
 
     // Calculation
-    const totalAmountDue = totalAmount - advancePaid
-    const totalAmountPaid = advancePaid
+    let totalAmountDue = totalAmount - advancePaid
+    let totalAmountPaid = advancePaid
     const paymentStatus = advancePaid === totalAmount ? 'PAID' : advancePaid > 0 ? 'PARTIALLY_PAID' : 'UNPAID'
 
     // Create the purchase order
@@ -50,6 +50,9 @@ const createPurchaseOrder = async (req, res) => {
         externalReferenceNumber: externalReferenceNumber || null,
       }
     }
+
+    totalAmountDue = parseFloat(totalAmountDue.toFixed(2))
+    totalAmountPaid = parseFloat(totalAmountPaid.toFixed(2))
 
     let newPurchaseOrder = {
       name,
@@ -424,7 +427,7 @@ const getPurchaseOrderInsights = async (req, res) => {
 
   const totalInvoiceAmountPromise = prisma.purchaseOrderInvoice.aggregate({
     where: {
-      PurchaseOrderId: {},
+      clientId,
     },
     _sum: {
       totalAmount: true,
