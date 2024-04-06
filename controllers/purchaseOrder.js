@@ -329,12 +329,38 @@ const getPurchaseOrderById = async (req, res) => {
 const getAllPurchaseOrders = async (req, res) => {
   try {
     const { page, filter } = req.body
-    const { orderStatus, paymentStatus } = filter ? filter : {}
+    const { orderStatus, paymentStatus, supplierId, search } = filter ? filter : {}
+
     const purchaseOrdersPromise = prisma.purchaseOrder.findMany({
       where: {
         clientId: req.user.clientId,
         orderStatus: orderStatus || undefined,
         paymentStatus: paymentStatus || undefined,
+        ...(supplierId && {
+          supplierId: supplierId,
+        }),
+        ...(search && {
+          OR: [
+            {
+              name: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+            {
+              description: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+            {
+              notes: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          ],
+        }),
       },
       include: {
         supplier: true,
@@ -373,7 +399,7 @@ const getAllPurchaseOrders = async (req, res) => {
 const getPurchaseOrderInsights = async (req, res) => {
   const clientId = req.user.client.id
 
-  const insights = await prisma.purchaseOrder.groupBy({
+  const insightsPromise = prisma.purchaseOrder.groupBy({
     by: ['paymentStatus'],
     _sum: {
       totalAmountPaid: true,
@@ -387,7 +413,35 @@ const getPurchaseOrderInsights = async (req, res) => {
     },
   })
 
-  return success(res, { insights }, 'Purchase order insights fetched successfully')
+  const totalPurchaseOrdersPromise = prisma.purchaseOrder.aggregate({
+    where: {
+      clientId,
+    },
+    _count: {
+      id: true,
+    },
+  })
+
+  const totalInvoiceAmountPromise = prisma.purchaseOrderInvoice.aggregate({
+    where: {
+      PurchaseOrderId: {},
+    },
+    _sum: {
+      totalAmount: true,
+    },
+  })
+
+  const [insights, totalPurchaseOrders, totalInvoiceAmount] = await Promise.all([
+    insightsPromise,
+    totalPurchaseOrdersPromise,
+    totalInvoiceAmountPromise,
+  ])
+
+  return success(
+    res,
+    { insights, totalPurchaseOrders, totalInvoiceAmount },
+    'Purchase order insights fetched successfully'
+  )
 }
 
 const updatePurchaseOrderStatus = async (req, res) => {
