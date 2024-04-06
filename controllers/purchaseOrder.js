@@ -82,6 +82,11 @@ const createPurchaseOrder = async (req, res) => {
       },
       PurchaseOrderInvoice: {
         create: {
+          client: {
+            connect: {
+              id: req.user.client.id,
+            },
+          },
           invoiceNumber: invoiceNumber || '',
           remarks: remarks || 'Purchase order created',
           invoiceDate: invoiceDate ? invoiceDate : null,

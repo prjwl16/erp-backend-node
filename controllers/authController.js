@@ -110,11 +110,39 @@ const login = async (req, res) => {
   })
 }
 
+const resetPassword = async (req, res) => {
+  const { email, password } = req.body
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+  })
+
+  if (!user) {
+    return invalidRequest(res, 'Invalid email')
+  }
+
+  const hashedPassword = await hashPassword(password)
+
+  const updatedUser = await prisma.user.update({
+    where: { email },
+    data: {
+      password: hashedPassword,
+    },
+  })
+
+  if (!updatedUser) {
+    return serverError(res, 'Failed to update password')
+  }
+
+  return success(res, null, 'Password updated successfully')
+}
+
 // ROUTES
 const authRouter = Router()
 
 authRouter.post('/register/client', register)
 authRouter.post('/check', check)
 authRouter.post('/login', login)
+authRouter.post('/reset-password-not-public', resetPassword)
 
 export default authRouter
