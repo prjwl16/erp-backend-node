@@ -83,7 +83,7 @@ const createProduct = async (req, res) => {
         images: paths,
         ProductType: {
           connect: {
-            id: 1,
+            id: 2,
           },
         },
         // conditionally connect to many tags
