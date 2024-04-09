@@ -7,13 +7,13 @@ const createCategory = async (req, res) => {
   //check if already exists for the client
   const category = await prisma.category.findFirst({
     where: {
-      name: name?.toLowerCase(),
+      name: name,
       clientId: req.user.clientId,
     },
   })
 
   if (category) {
-    invalidRequest(res, 'Category already exists')
+    return invalidRequest(res, 'Category already exists')
   }
 
   // make first letter capital
@@ -65,7 +65,7 @@ const deleteCategory = async (req, res) => {
     })
 
     if (!isExists) {
-      invalidRequest(res, 'Category does not exist')
+      return invalidRequest(res, 'Category does not exist')
     }
 
     // check if this category is used by any product
@@ -87,12 +87,12 @@ const deleteCategory = async (req, res) => {
     })
 
     if (products.length > 0) {
-      invalidRequest(res, 'Category is used by some products')
+      return invalidRequest(res, 'Category is used by some products')
     }
-    success(res, { category }, 'Category deleted successfully')
+    return success(res, { category }, 'Category deleted successfully')
   } catch (error) {
     console.log(error)
-    serverError(res, 'Failed to delete the category')
+    return serverError(res, 'Failed to delete the category')
   }
 }
 
