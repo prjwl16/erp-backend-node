@@ -25,6 +25,7 @@ app.get('/', (req, res) => {
 
 app.get('/cal', (req, res) => {
   console.log(req.query)
+  console.log(req.body)
   res.send('Hello GET')
 })
 
