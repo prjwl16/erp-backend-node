@@ -30,7 +30,8 @@ protectedRouter.use('/sales', salesRouter)
 router.use(verifyToken, protectedRouter)
 
 router.get('/cal', (req, res) => {
-  res.send('Hello')
+  console.log(req.query)
+  res.send('Hello GET')
 })
 
 router.post('/cal', (req, res) => {
