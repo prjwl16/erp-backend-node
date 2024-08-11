@@ -9,6 +9,7 @@ import userRouter from './userController.js'
 import utilsController from './utilsController.js'
 import warehouseRouter from './warehouseController.js'
 import purchaseOrderTransactionsRouter from './purchaseOrderTransaction.js'
+import salesRouter from './sales.js'
 
 const router = Router()
 
@@ -24,7 +25,17 @@ protectedRouter.use('/user', userRouter)
 protectedRouter.use('/utils', utilsController)
 protectedRouter.use('/warehouse', warehouseRouter)
 protectedRouter.use('/purchase-order-transaction', purchaseOrderTransactionsRouter)
+protectedRouter.use('/sales', salesRouter)
 
 router.use(verifyToken, protectedRouter)
+
+router.get('/cal', (req, res) => {
+  res.send('Hello')
+})
+
+router.post('/cal', (req, res) => {
+  console.log(req.body)
+  res.send('Hello')
+})
 
 export default router

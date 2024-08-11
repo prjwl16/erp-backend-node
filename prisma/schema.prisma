@@ -35,6 +35,7 @@ model Client {
   Supplier             Supplier[]
   PurchaseOrder        PurchaseOrder[]
   PurchaseOrderInvoice PurchaseOrderInvoice[]
+  Sales                Sales[]
 }
 
 model User {
@@ -58,6 +59,8 @@ model User {
   Supplier               Supplier[]
   PurchaseOrder          PurchaseOrder[]
   PurchaseOrderStatusLog PurchaseOrderStatusLog[]
+  updatedSales           Sales[]                  @relation("updatedBy")
+  Sales                  Sales[]                  @relation("createdBy")
 }
 
 enum Role {
@@ -153,8 +156,10 @@ model Warehouse {
   manager   User? @relation(fields: [managerId], references: [id])
   managerId Int?
 
-  client   Client @relation(fields: [clientId], references: [id])
-  clientId Int
+  client      Client  @relation(fields: [clientId], references: [id])
+  clientId    Int
+  Sales       Sales[] @relation("WarehouseSales")
+  ReturnSales Sales[] @relation("ReturnWarehouseSales")
 }
 
 model Warehouse_Product {
@@ -316,4 +321,30 @@ enum TRANSACTION_MODE {
   NET_BANKING
   CHEQUE
   OTHER
+}
+
+// Retail
+
+model Sales {
+  id            Int       @id @default(autoincrement())
+  customerName  String
+  customerPhone String
+  productName   String
+  amount        Float
+  warehouseId   Int
+  warehouse     Warehouse @relation("WarehouseSales", fields: [warehouseId], references: [id])
+
+  clientId Int
+  Client   Client @relation(fields: [clientId], references: [id])
+
+  isReturn          Boolean    @default(false)
+  returnWarehouseId Int?
+  returnWarehouse   Warehouse? @relation("ReturnWarehouseSales", fields: [returnWarehouseId], references: [id]) // if return
+
+  updatedById Int?
+  updatedBy   User?    @relation("updatedBy", fields: [updatedById], references: [id])
+  createdById Int
+  createdBy   User     @relation("createdBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @db.Timestamp()
+  updatedAt   DateTime @updatedAt @db.Timestamp()
 }
