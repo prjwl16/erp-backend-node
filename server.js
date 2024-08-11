@@ -26,11 +26,14 @@ app.get('/', (req, res) => {
 app.get('/cal', (req, res) => {
   console.log(req.query)
   console.log(req.body)
+  // print where the request coming from
+  console.log(req.headers)
   res.send('Hello GET')
 })
 
 app.post('/cal', (req, res) => {
   console.log(req.body)
+  console.log(req.headers)
   res.send('Hello')
 })
 
