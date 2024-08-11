@@ -23,12 +23,12 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-router.get('/cal', (req, res) => {
+app.get('/cal', (req, res) => {
   console.log(req.query)
   res.send('Hello GET')
 })
 
-router.post('/cal', (req, res) => {
+app.post('/cal', (req, res) => {
   console.log(req.body)
   res.send('Hello')
 })
